@@ -1,0 +1,24 @@
+import si.fri.algator.execute.AbstractOutput;
+
+/**
+ * Output class for the project <PPP>.
+ * 
+ * @author ...
+ */
+public class Output extends AbstractOutput {
+
+  // TODO: define fields to hold the output data of an algorithm
+  // ...
+  
+  public Output(/* TODO: define appropriate constructor parameters */) {    
+    // this.parameter = parameter;
+  }
+  
+  @Override
+  public String toString() {
+    // TODO: provide a handy representation (include only important data) of this Output object
+    // This method is used only in the debugging process.
+    return super.toString();
+  }
+  
+}

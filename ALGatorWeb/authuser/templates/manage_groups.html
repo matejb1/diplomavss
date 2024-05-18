@@ -1,0 +1,26 @@
+{% load static %}
+
+<script>var data = JSON.parse('{{ groups|safe }}');</script>
+<script type="text/javascript" src="{% static 'js/SearchUtils.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/Helper.js' %}"></script>
+
+
+<h2>Manage groups</h2>
+
+<select id="searchDropdown">
+  <option value="id">id</option>
+  <option selected value="name">name</option>
+</select>
+
+<input type="text" id="searchField" onkeyup="searchByField(window.location.pathname == '/permissions/users')" placeholder="Search..." size="35" maxlength="35">
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">name</th>
+        </tr>
+    </thead>
+    <tbody id="tbodygroups">
+    </tbody>
+</table>

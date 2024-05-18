@@ -1,0 +1,72 @@
+{% load static %}
+
+<script>
+  var allGroups = {{ data.all_groups|safe }};
+  var userGroups = {{ data.groups|safe }};
+  var permissions = {{ data.permissions|safe }};
+  var allPermissions = {{ data.all_permissions|safe }};
+  var allEntties = {{ data.all_entties|safe }};
+  var currentUser = {{ data.userdata|safe }}[0];
+</script>
+<script type="text/javascript" src="{% static 'js/UserGroupsTable.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/Helper.js' %}"></script>
+<form>
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input type="text" maxlength="50" class="form-control" id="username"  placeholder="Username">
+  </div>
+  <div class="form-group">
+    <label for="email">Email address</label>
+    <input type="email" maxlength="50" class="form-control" id="email" aria-describedby="emailHelp" placeholder="Enter email">
+    <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input type="password" disabled class="form-control" id="password" placeholder="Password">
+  </div>
+  <div class="form-check">
+    <input type="checkbox" class="form-check-input" id="isSuperUser">
+    <label class="form-check-label" for="isSuperUser">Is superuser</label>
+  </div>
+  <div class="form-check">
+    <input type="checkbox" class="form-check-input" id="isStaff">
+    <label class="form-check-label" for="isStaff">Is staff</label>
+  </div>
+  <div class="form-check">
+    <input type="checkbox" class="form-check-input" id="isActive">
+    <label class="form-check-label" for="isActive">Is active</label>
+  </div>
+
+  <table class="table table-hover">
+      <thead>
+          <tr>
+              <th scope="col">#</th>
+              <th scope="col">Group name</th>
+              <th scope="col">Delete</th>
+          </tr>
+      </thead>
+      <tbody id="tbodygroups">
+      </tbody>
+  </table>
+
+  {% include "modal_group.html" %}
+  <button type="button" class="btn btn-warning" data-toggle="modal" id="addgroupbtn" data-target="#addgroup">Add group</button>
+
+  <table class="table table-hover">
+      <thead>
+          <tr>
+              <th scope="col">#</th>
+              <th scope="col">Entity id</th>
+              <th scope="col">Permission name</th>
+              <th scope="col">Is private</th>
+              <th scope="col">DELETE</th>
+          </tr>
+      </thead>
+      <tbody id="tbodypermissions">
+      </tbody>
+  </table>
+
+  {% include "modal_permissions.html" %}
+  <button type="button" class="btn btn-warning" data-toggle="modal" id="addpermissionbtn" data-target="#addpermission">Add permission</button>
+
+</form>

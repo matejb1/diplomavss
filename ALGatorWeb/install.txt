@@ -1,0 +1,41 @@
+- Za pravilno delovanje spletne strani potrebuješ python 3 in Django 3.2
+
+- Inštalacija Django in paketa pygments:
+
+sudo python -m pip install Django==3.2
+sudo python -m pip install django_pygments
+sudo python -m pip install djangorestframework
+sudo python -m pip install requests
+
+
+
+
+- Zagon serverja za prikaz spletne strani:
+
+python manage.py runserver
+
+(stran je potem dosegljiva na http://127.0.0.1:8000).
+
+
+
+## New verison (HTTPS included)
+
+1. Make certificate
+**Django Project**
+mkdir ~/certs
+cd ~/certs
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+**Spark project**
+ keytool -genkey -keyalg RSA -alias selfsigned -keystore keystore.jks -storepass password -validity 360 -keysize 2048
+
+2. Install dependencies
+pip install werkzeug django-extensions pyOpenSSL
+pip install djangorestframework-simplejwt
+pip install djangorestframework-simplejwt[crypto]
+Not sure about this one. ????? pip install pip-system-certs ??????
+
+
+3. Run a server (new way)
+python manage.py runserver_plus --cert-file /path/to/cert.pem --key-file /path/to/certs/key.pem 0.0.0.0:8000
+
