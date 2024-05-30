@@ -1,0 +1,11 @@
+Django==3.2
+django_pygments
+djangorestframework
+requests
+mysqlclient
+werkzeug
+pip-system-certs
+django-extensions
+pyOpenSSL
+djangorestframework-simplejwt
+djangorestframework-simplejwt[crypto]

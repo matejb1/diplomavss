@@ -1,0 +1,25 @@
+version: '3.1'
+services:
+  bj:
+    image: bj
+    container_name: bj
+    volumes:
+      - /path/to/ALGATOR_ROOT:/ALGATOR_ROOT
+  nginx:
+    image: nginx
+    container_name: mynginx1
+    volumes:
+      - /path/to/nginx.conf:/etc/nginx/nginx.conf:ro 
+      # -/path/to/ssl:/etc/nginx/ssl # if you use self signed certificate
+      - /path/to/certbot/conf:/etc/letsencrypt
+      - /path/to/certbot/www:/var/www/certbot
+    ports:
+      - 81:80
+      - 444:443
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: certbot
+  #   volumes: 
+  #     - ../../certbot/conf:/etc/letsencrypt
+  #     - ../../certbot/www:/var/www/certbot
+  #   command: certonly --webroot -w /var/www/certbot --force-renewal --email {YOUR_MAIL} -d {YOUR_DOMAIN} --agree-tos

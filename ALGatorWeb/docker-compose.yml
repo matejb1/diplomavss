@@ -1,0 +1,40 @@
+version: '3.1'
+services:
+  django:
+    image: dj
+    container_name: dj
+    volumes:
+      - /path/to/ALGATOR_ROOT:/ALGATOR_ROOT
+    environment:
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_PORT: ${DATABASE_PORT}
+      ALGATOR_HOST: ${ALGATOR_HOST}
+      ALGATOR_PORT: ${ALGATOR_PORT}
+      PROD: True
+    depends_on:
+      - db
+  nginx:
+    image: nginx
+    container_name: mynginx
+    volumes:
+      - /path/to/ALGatorWeb/assets/:/static 
+      -  /path/to/ALGatorWeb/nginx.conf:/etc/nginx/nginx.conf:ro 
+      # -  /path/to/ALGatorWeb/ssl:/etc/nginx/ssl # If you use self signened certificate
+      - /path/to/certbot/conf:/etc/letsencrypt
+      - /path/to/certbot/www:/var/www/certbot
+    ports:
+      - 80:80
+      - 443:443
+  db:
+    image: mysql:8.0
+    container_name: db
+    volumes:
+      - /path/to/db:/var/lib/mysql
+    environment:
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}

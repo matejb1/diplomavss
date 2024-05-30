@@ -8,14 +8,14 @@ https://docs.djangoproject.com/en/1.6/howto/deployment/wsgi/
 """
 
 # Old version; new version was written to provide envorinment variables
-#import os
-#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ALGator.settings")
-#
-#from django.core.wsgi import get_wsgi_application
-#application = get_wsgi_application()
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ALGator.settings")
+
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
 # end
 
-
+"""
 from django.core.handlers.wsgi import WSGIHandler
 import django
 import os
@@ -35,3 +35,4 @@ class WSGIEnvironment(WSGIHandler):
         return super(WSGIEnvironment, self).__call__(environ, start_response)
 
 application = WSGIEnvironment()
+"""

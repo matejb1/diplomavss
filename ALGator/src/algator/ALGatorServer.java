@@ -13,7 +13,7 @@ import si.fri.algator.server.ASLog;
 import si.fri.algator.client.Requester;
 import si.fri.algator.global.ATGlobal;
 
-import static spark.Spark.secure;
+// import static spark.Spark.secure;
 
 /**
  *
@@ -94,7 +94,7 @@ public class ALGatorServer {
       String serverResponse = Requester.askALGatorServer(ASGlobal.REQ_CHECK_Q);
       boolean serverIsAlive = serverResponse.equals(ASGlobal.REQ_CHECK_A);
 
-      secure("/path/to/keystore.jks", "password", null, null);
+      // secure("/path/to/keystore.jks", "password", null, null);
 
       ASLog.doVerbose = true;
       

@@ -18,16 +18,14 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5_0$q%!57#_5%vep30rg-_%!k5z7c*q*4=z3h%k(b&@2g6q((7'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-5_0$q%!57#_5%vep30rg-_%!k5z7c*q*4=z3h%k(b&@2g6q((7')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+DEBUG = not algator_global.IS_PRODUCTION
 ALLOWED_HOSTS = ["*"]
 
 
@@ -41,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_pygments',
-    'django_extensions',
     'rest_framework_simplejwt',
     'login',
     'problems',
@@ -65,7 +62,7 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
 }
 
 # SESSION_ENGINE = 'django.contrib.sessions.backends.file'
@@ -139,6 +136,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'assets/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -158,19 +156,20 @@ LOGOUT_REDIRECT_URL = '/'
 
 
 ALGATOR_SERVER = {
- 'Hostname' : 'localhost',
- 'Port'     : 12321
+ 'Hostname' : os.getenv('ALGATOR_HOST', 'localhost'),
+ 'Port'     : os.getenv('ALGATOR_PORT', 12321)
 }
 
 # HTTPS settings
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+#if  algator_global.IS_PRODUCTION:
+#    SECURE_SSL_REDIRECT = True
+#    SESSION_COOKIE_SECURE = True
+#    CSRF_COOKIE_SECURE = True
 
 # JWT settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=45),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=50),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": False,

@@ -1,6 +1,7 @@
 from Classes.GlobalConfig import globalConfig 
 import requests
 import json 
+from algator_global import IS_PRODUCTION
 
 class ServerConnector(object):
 
@@ -12,12 +13,12 @@ class ServerConnector(object):
       headers = {"Content-Type": "application/x-www-form-urlencoded; charset=utf-8"}
 
       parts = request.split(' ')
-      url = "https://" + name + ":" + str(port) + "/" + parts[0]
+      url = f"http://{'s' if IS_PRODUCTION else ''}" + name + ":" + str(port) + "/" + parts[0]
       parts = parts[1:] 
       data  = ' '.join(parts)
       encoded_data = data.encode("utf-8")
 
-      response = requests.post(url, data=encoded_data, headers=headers, verify=False)
+      response = requests.post(url, data=encoded_data, headers=headers, verify=IS_PRODUCTION)
 
       return response.text
 
