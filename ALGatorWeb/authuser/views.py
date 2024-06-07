@@ -20,31 +20,75 @@ class MyObtainTokenPairView(TokenObtainPairView):
 
 
 # REST endpoints
-@api_view(['POST'])
-def add_user_permission(request):
-    return validate_request_and_execute('POST', request, service.add_permission_to_user)
+@api_view(['GET'])
+def get_users(request):
+    return validate_request_and_execute('GET', request, service.get_users)
+
+@api_view(['GET'])
+def get_user(request, id):
+    return validate_request_and_execute('GET', request, service.get_user, id)
 
 @api_view(['POST'])
+def get_groups(request):
+    return validate_request_and_execute('POST', request, service.get_groups)
+
+@api_view(['GET'])
+def get_groups_user(request):
+    return validate_request_and_execute('GET', request, service.get_groups_user)
+
+
+@api_view(['GET'])
+def get_all_user_permissions(request):
+    return validate_request_and_execute('GET', request, service.get_all_user_permissions)
+
+@api_view(['GET'])
+def entities_permissions(request):
+    return validate_request_and_execute('GET', request, service.entities_permissions)
+
+@api_view(['GET'])
+def get_entities(request):
+    return validate_request_and_execute('GET', request, service.get_entities)
+
+
+
+@api_view(['POST'])
+def can(request):
+    return service.can_request(request)
+
+
+@api_view(['PUT'])
+def add_user_permission(request):
+    return validate_request_and_execute('PUT', request, service.add_permission_to_user)
+
+@api_view(['PUT'])
 def add_group_permission(request):
-    return validate_request_and_execute('POST', request, service.add_permission_to_group)
+    return validate_request_and_execute('PUT', request, service.add_permission_to_group)
 
 @api_view(['POST'])
 def add_group(request):
-    return validate_request_and_execute('POST', request, service.add_user_to_group)
+    return validate_request_and_execute('POST', request, service.add_group)
 
+@api_view(['DELETE'])
+def remove_user_from_group(request):
+    return validate_request_and_execute('DELETE', request, service.remove_user_from_group)
 
 @api_view(['DELETE'])
 def remove_group(request):
-    return validate_request_and_execute('DELETE', request, service.remove_user_from_group)
+    return validate_request_and_execute('DELETE', request, service.remove_group)
+
+@api_view(['POST'])
+def add_user_to_group(request):
+    return validate_request_and_execute('POST', request, service.add_user_to_group)
 
 
-@api_view(['DELETE'])
-def remove_user_permission(request):
-    return validate_request_and_execute('DELETE', request, service.remove_user_permission)
 
-@api_view(['DELETE'])
-def remove_group_permission(request):
-    return validate_request_and_execute('DELETE', request, service.remove_group_permission)
+@api_view(['PUT'])
+def update_user_permission(request):
+    return validate_request_and_execute('PUT', request, service.update_user_permission)
+
+@api_view(['PUT'])
+def update_group_permission(request):
+    return validate_request_and_execute('PUT', request, service.update_group_permission)
 
 
 
@@ -54,12 +98,12 @@ def manage_users_view(request):
     if precheck is not None:
         return precheck
 
-    users = User.objects.all().values()
+    # users = User.objects.all().values()
     return render(request,
                   'cpindex.html', {
                       'contentpage': 'manage_users.html',
-                      'users': json.dumps(list(users),
-                                          default=serialize_datetime),
+                      # 'users': json.dumps(list(users),
+                      #                     default=serialize_datetime),
                   }
                   )
 
@@ -72,11 +116,13 @@ def manage_single_user_view(request, id):
     user = None
     try:
         # All OK. Superuser has full access.
-        data = service.get_single_user_data_view(id)
+        # data = service.get_single_user_data_view(id)
         return render(request,
                       'cpindex.html',
                       {'contentpage': 'manage_single_user.html',
-                       'data': data}
+                       'user_id': id,
+                       # 'data': data
+                       }
                       )
     except Exception:
         # User doesn't exists.
@@ -91,16 +137,16 @@ def manage_single_user_view(request, id):
 
 
 def manage_groups_view(request):
-    precheck = is_valid_user(request)
-    if precheck is not None:
-        return precheck
+    # precheck = is_valid_user(request)
+    # if precheck is not None:
+    #     return precheck
 
-    groups = Group.objects.all()
+    # groups = Group.objects.all()
     return render(request,
                   'cpindex.html',
                   {'contentpage': 'manage_groups.html',
-                   'groups': json.dumps([{"id": g.id,
-                                          "name": g.name} for g in groups]),
+                   # 'groups': json.dumps([{"id": g.id,
+                   #                        "name": g.name} for g in groups]),
                    }
                   )
 
