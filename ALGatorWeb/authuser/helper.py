@@ -58,17 +58,20 @@ def run_query(query, query_parameters=[]):
         data = list(cursor.fetchall())
     return data
 
-def validate_request_and_execute(method, request, function_service):
+def validate_request_and_execute(method, request, function_service, id=None):
     if request.method == method:
         response = jwt_precheck(request)
         if response.status_code in [401, 405]:
             return response
-        credentials = get_credentials_jwt(response.cookies["access"].value)
-        if credentials["is_superuser"] == 1:
+        # credentials = get_credentials_jwt(response.cookies["access"].value)
+        #if credentials["is_superuser"] == 1:
+        if request.method == 'GET':
+            response = function_service(response, id)
+        else:
             data = QueryDict.dict(request.POST)
             response = function_service(response, data)
-        else:
-            response = HttpResponse({"Error": "You're not a superuser."}, status=401)
+        #else:
+        #    response = HttpResponse({"Error": "You're not a superuser."}, status=401)
     else:
         response = HttpResponse({"Error": "Method not allowed."}, status=405)
     return response
@@ -102,6 +105,5 @@ def add_entity(user, entity_id, is_private, entity_type):
 
 # TODO: probably remove enttity
 
-# TODO: can: T/F --> te zadejve implemetiri v JAVI + Javascript
-def can(user, entity_id, permission):
-    pass
+def contains(id, p, pfc=0xFFFF):  # u/g, p, p-full control
+    return (id & p) == p or (id & pfc) == pfc

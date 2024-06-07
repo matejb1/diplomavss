@@ -2,9 +2,10 @@ import json
 
 from django.contrib.auth.models import User
 from django.core import serializers
+from django.http import QueryDict, HttpResponse
 
-from .helper import run_query
-from .models import Group, PermissionType, EntityPermissionUser, Entities, EntityPermissionGroup
+from .helper import run_query, jwt_precheck, get_credentials_jwt, contains
+from .models import Group, PermissionType, EntityPermissionUser, Entities, EntityPermissionGroup, Group_User, User as Usr
 from .queries import *
 
 
@@ -19,6 +20,7 @@ def get_single_user_data_view(id):
     data["all_entties"] = json.dumps(run_query(ENTTITES_AND_OWNER))
     return data
 
+
 def get_single_group_data_view(id):
     data = {}
     group = Group.objects.get(pk=int(id))
@@ -29,62 +31,90 @@ def get_single_group_data_view(id):
     return data
 
 
-def add_user_to_group(response, data):
-    group_id = int(data["group_id"])
-    user_id = int(data["user_id"])
-    user_is_in_group = bool(run_query(IS_THIS_USER_ALREADY_IN_GROUP, [group_id, user_id])[0][0])
-    if not user_is_in_group:
-        current_user = User.objects.get(pk=user_id)
-        new_group = Group.objects.get(pk=group_id)
-        new_group.user.add(current_user)
+def add_group(response, data):
+    try:
+        uid = Usr.objects.get(pk=f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}')
+        gid = f"g{int(Group.objects.latest('id').id[1:])+1}"
+        Group.objects.create(id=gid, name=data['name'], owner=uid)
         response.status_code = 201
-    else:
+    except Exception:
         response.status_code = 500
         response.content = {"Error": "User exists in this group."}
     return response
 
 
-def remove_user_from_group(response, data):
-    group_id = int(data["group_id"])
-    user_id = int(data["user_id"])
-    user_is_in_group = bool(run_query(IS_THIS_USER_ALREADY_IN_GROUP, [group_id, user_id])[0][0])
-    if user_is_in_group:
-        current_user = User.objects.get(pk=user_id)
-        new_group = Group.objects.get(pk=group_id)
-        new_group.user.remove(current_user)
+def add_user_to_group(response, data):
+    response.content_type = "application/json"
+    try:
+        uid = Usr.objects.get(user=User.objects.get(username=data["username"]))
+        gid = Group.objects.get(pk=data["gid"])
+
+        Group_User.objects.get_or_create(user=uid, group=gid)
+        response.status_code = 201
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User isn't present in this group."}
+
+    return response
+
+def remove_group(response, data):
+    response.content_type = "application/json"
+    try:
+        uid = Usr.objects.get(pk=f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}')
+        Group.objects.get(pk=data['group_id']).delete()
         response.status_code = 203
-    else:
+    except Exception:
         response.status_code = 500
         response.content = {"Error": "User isn't present in this group."}
     return response
 
+def remove_user_from_group(response, data):
+    response.content_type = "application/json"
+    try:
+        uid = Usr.objects.get(user=User.objects.get(username=data["username"]))
+        gid = Group.objects.get(pk=data["gid"])
+        Group_User.objects.get(user=uid, group=gid).delete()
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User isn't present in this group."}
+    return response
 
 def add_permission_to_user(response, data):
-    permission_id = int(data["permission_id"])
-    entity_id = int(data["entity_id"])
-    user_id = int(data["user_id"])
-    user_has_permission = bool(run_query(USER_HAS_THAT_PERMISSION, [user_id, entity_id, permission_id])[0][0])
-    if not user_has_permission:
-        current_user = User.objects.get(pk=user_id)
-        entity = Entities.objects.get(pk=entity_id)
-        permission = PermissionType.objects.get(pk=permission_id)
-        epu = EntityPermissionUser.objects.create(entity=entity, user=current_user, permission=permission)
+    pid = PermissionType.objects.get(pk=data["permission_id"])
+    eid = Entities.objects.get(pk=data["entity_id"])
+    uid = Usr.objects.get(user=User.objects.get(username=data["id"]))
+
+    epu, created = EntityPermissionUser.objects.get_or_create(entity=eid, user=uid)
+    response.content_type = "application/json"
+
+    if not created and not contains(epu.value, pid.value):
+        epu.value |= pid.value
+        epu.save()
+        response.status_code = 201
+    elif created:
+        epu.value = pid.value
+        epu.save()
         response.status_code = 201
     else:
         response.status_code = 500
         response.content = {"Error": "User exists in this group."}
     return response
+
 
 def add_permission_to_group(response, data):
-    permission_id = int(data["permission_id"])
-    entity_id = int(data["entity_id"])
-    group_id = int(data["group_id"])
-    group_has_permission = bool(run_query(GROUP_HAS_THAT_PERMISSION, [group_id, entity_id, permission_id])[0][0])
-    if not group_has_permission:
-        current_group = Group.objects.get(pk=group_id)
-        entity = Entities.objects.get(pk=entity_id)
-        permission = PermissionType.objects.get(pk=permission_id)
-        epu = EntityPermissionGroup.objects.create(entity=entity, group=current_group, permission=permission)
+    pid = PermissionType.objects.get(pk=data["permission_id"])
+    eid = Entities.objects.get(pk=data["entity_id"])
+    gid = Group.objects.get(pk=data["id"])
+
+    epg, created = EntityPermissionGroup.objects.get_or_create(entity=eid, group=gid)
+
+    if not created and not contains(epg.value, pid.value):
+        epg.value |= pid.value
+        epg.save()
+        response.status_code = 201
+    elif created:
+        epg.value = pid.value
+        epg.save()
         response.status_code = 201
     else:
         response.status_code = 500
@@ -92,30 +122,186 @@ def add_permission_to_group(response, data):
     return response
 
 
-def remove_user_permission(response, data):
-    permission_id = int(data["permission_id"])
-    user_id = int(data["user_id"])
-    entity_id = int(data["entity_id"])
-    id = int(data["id"])
-    user_has_permission = bool(run_query(USER_HAS_THAT_PERMISSION, [user_id, entity_id, permission_id])[0][0])
-    if user_has_permission:
-        EntityPermissionUser.objects.get(pk=id).delete()
+def update_user_permission(response, data):
+    uid = Usr.objects.get(pk=data["id"])
+    value = int(data["value"])
+    pid = PermissionType.objects.get(pk=data["permission_id"])
+    eid = Entities.objects.get(pk=data["entity_id"])
+    epu = EntityPermissionUser.objects.get(user=uid, entity=eid)
+
+    if pid.value == value:
+        epu.value &= ~value
+        epu.save()
         response.status_code = 201
     else:
         response.status_code = 500
         response.content = {"Error": "User exists in this group."}
     return response
 
-def remove_group_permission(response, data):
-    permission_id = int(data["permission_id"])
-    group_id = int(data["group_id"])
-    entity_id = int(data["entity_id"])
-    id = int(data["id"])
-    group_has_permission = bool(run_query(GROUP_HAS_THAT_PERMISSION, [group_id, entity_id, permission_id])[0][0])
-    if group_has_permission:
-        EntityPermissionGroup.objects.get(pk=id).delete()
+
+def update_group_permission(response, data):
+    gid = Group.objects.get(pk=data["id"])
+    value = int(data["value"])
+    pid = PermissionType.objects.get(pk=data["permission_id"])
+    eid = Entities.objects.get(pk=data["entity_id"])
+    epg = EntityPermissionGroup.objects.get(group=gid, entity=eid)
+
+    if pid.value == value:
+        epg.value &= ~value
+        epg.save()
         response.status_code = 201
     else:
         response.status_code = 500
         response.content = {"Error": "User exists in this group."}
     return response
+
+
+def get_entities(response, *args):
+    try:
+        uid = Usr.objects.get(pk=f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}')
+        data = []
+        if uid.pk == 'u0':
+            data = Entities.objects.all()
+        else:
+            data.extend(Entities.objects.filter(owner=uid))
+            for gu in Group_User.objects.filter(user=uid):
+                for epg in EntityPermissionGroup.objects.filter(group=gu.group):
+                    if epg.entity not in data:
+                        data.append(epg.entity)
+
+            for epu in EntityPermissionUser.objects.filter(user=uid):
+                if epu.entity not in data:
+                    data.append(epu.entity)
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User exists in this group."}
+    response.content = serializers.serialize("json", data, )
+    response.content_type = "application/json"
+    return response
+
+def get_users(response, *args):
+    users = serializers.serialize("json", User.objects.all(),
+                                  fields=["username", "email", "is_superuser"])
+    response.content = users
+    response.content_type = "application/json"
+    return response
+
+
+def get_user(response, id):
+    user = serializers.serialize('json', [User.objects.get(pk=id), ],
+                                 fields=["username", "email", "is_superuser", "is_staff", "is_active"])
+    response.content = user
+    response.content_type = "application/json"
+    return response
+
+
+def get_groups_user(response, *args):
+    try:
+        uid = Usr.objects.get(pk=f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}')
+        g = []
+        if uid.pk == 'u0':  # root
+            g = Group.objects.all()
+        else:
+            g = [gu.group for gu in Group_User.objects.filter(user=uid)]
+            g.extend(Group.objects.filter(owner=uid))
+        groups = serializers.serialize("json", list(set(g)), )
+        response.status_code = 200
+        response.content = groups
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User exists in this group."}
+    response.content_type = "application/json"
+    return response
+
+
+def get_groups(response, data):
+    eid = Entities.objects.get(pk=data["eid"])
+    uid = Usr.objects.get(pk=f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}')
+    pw = PermissionType.objects.get(codename='can_write').value
+    grp = []
+
+    if uid.pk == 'u0':
+        grp.extend(Group.objects.all())
+    else:
+        for gu in Group_User.objects.filter(user=uid):
+            try:
+                epg = EntityPermissionGroup.objects.get(group=gu.group, entity=eid)
+                if contains(epg.value, pw):
+                    grp.append(gu.group)
+            except Exception:
+                continue
+        grp.extend(Group.objects.filter(owner=uid))
+
+    groups = serializers.serialize("json", list(set(grp)), )
+    response.content = groups
+    response.content_type = "application/json"
+    return response
+
+
+def get_all_user_permissions(response, *args):
+    permissions = serializers.serialize("json", PermissionType.objects.all(), )
+    response.content = permissions
+    response.content_type = "application/json"
+    return response
+
+def entities_permissions(response, *args):
+    u = Usr.objects.get(pk=f'u{int(get_credentials_jwt(response.cookies["access"].value)["user_id"])-1}')
+    # gids = ", ".join(f'"{g.group.pk}"' for g in Group_User.objects.filter(user=u))
+    data = []
+    if u.pk == 'u0':
+        data = json.dumps(run_query(PERMISSIONS_ENTTIES_USER_GROUP_ROOT, []))
+    else:
+        data = json.dumps(run_query(PERMISSIONS_ENTTIES_USER_GROUP, [u.pk, u.pk]))
+    response.content = data
+    response.content_type = "application/json"
+    return response
+
+
+# TODO: can: T/F --> te zadejve implemetiri v JAVI + Javascript
+def can_request(request):
+    uid = ''
+    credentials = None
+    data = QueryDict.dict(request.POST)
+    response = jwt_precheck(request)
+    if response.status_code in [401, 405]:
+        uid = 'u1'  # Anonymous
+        response.status_code = 200
+    else:
+        uid = f'u{get_credentials_jwt(response.cookies["access"].value)["user_id"] - 1}'
+
+    response.content = can(uid, data["eid"], data["pid"])
+    return response
+
+
+def can(uid, eid, pid):
+    try:
+        if uid == 'u0':  # Root
+            return True
+        e = Entities.objects.get(pk=eid)
+        if e.owner.pk == uid:  # Owner
+            return True
+        if e.is_private:  # Entity is private
+            return False
+        user = Usr.objects.get(pk=uid)
+        p = PermissionType.objects.get(pk=pid)
+        pfc = PermissionType.objects.get(value=0xFFFF)
+        try:
+            epu = EntityPermissionUser.objects.get(entity=e, user=user)
+            if contains(epu.value, p.value, pfc.value):
+                return True
+        except EntityPermissionUser.DoesNotExist:
+            pass
+        try:
+            groups = [gu.group for gu in Group_User.objects.filter(user=user)]
+            groups.append(Group.objects.get(pk=('g1' if uid == 'u1' else 'g0')))
+            for g in groups:
+                try:
+                    epg = EntityPermissionGroup.objects.get(entity=e, group=g)
+                except Exception:
+                    continue
+                if contains(epg.value, p.value, pfc.value):
+                    return True
+        except Exception:
+            return False
+    except Exception:
+        return False

@@ -10,14 +10,23 @@
       <div class="modal-body">
         <form>
           <div class="form-group">
-            <label for="permission-name" class="col-form-label">Select permission:</label>
-            <select class="form-select form-select-lg mb-3" id="permission-name" aria-label="Default select example">
-            </select>
-          </div>
-          <div class="form-group">
             <label for="entity-name" class="col-form-label">Select entity:</label>
             <select class="form-select form-select-lg mb-3" id="entity-name" aria-label="Default select example">
             </select>
+          </div>
+          <div class="form-group">
+            <label for="group-name" class="col-form-label">Select group:</label>
+            <select class="form-select form-select-lg mb-3" id="group-name" aria-label="Default select example">
+            </select>
+            <label for="username_all_permissions" class="col-form-label">or input username:</label>
+            <input type="text" class="form-control-sm" id="username_all_permissions" />
+          </div>
+          <div class="form-group">
+            <label for="permission-name" class="col-form-label">Select permission:</label>
+            <select class="form-select form-select-lg mb-3" id="permission-name" aria-label="Default select example">
+            </select>
+            <input type="checkbox" id="use_username" />
+            <label for="use_username">Add by username</label>
           </div>
         </form>
       </div>
