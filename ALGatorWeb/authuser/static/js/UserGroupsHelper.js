@@ -21,6 +21,7 @@ function appendPermissionOptions() {
     $('#permission-name').find("option").remove().end();
     let content = "";
     for(let item of allPermissions) {
+        can_dict.hasOwnProperty
         can($('#entity-name').val(), item.pk).then((resolve, reject) => {
             if(resolve)
                 $('#permission-name').append(`<option value='${item.pk}' title='${item.fields.codename}'>${item.fields.name}</option>`);
