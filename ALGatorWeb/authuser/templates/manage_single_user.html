@@ -1,15 +1,8 @@
 {% load static %}
 
-<script type="text/javascript" src="{% static 'js/Helper.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/UserGroupsHelper.js' %}"></script>
 <script type="text/javascript" src="{% static 'js/ManageSingleUser.js' %}"></script>
 <script>
-    /*
-  var allGroups = {{ data.all_groups|safe }};
-  var userGroups = {{ data.groups|safe }};
-  var permissions = {{ data.permissions|safe }};
-  var allPermissions = {{ data.all_permissions|safe }};
-  var allEntties = {{ data.all_entties|safe }};
-  */
   var allGroups = null, userGroups = null, permissions = null, allPermissions = null, allEntties = null, currentUser = null;
   var data = {};
   loadSingleUserPage({{user_id|safe}});
@@ -40,4 +33,6 @@
     <input type="checkbox" class="form-check-input" id="isActive">
     <label class="form-check-label" for="isActive">Is active</label>
   </div>
+
+  <button type="button" onclick="saveUser({{user_id|safe}})">Save</button>
 </form>

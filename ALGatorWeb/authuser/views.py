@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import service
 from .helper import *
-from .models import User, Group
+from .models import User as Usr, Group
 from .serializers import serialize_datetime, MyTokenObtainPairSerializer
 
 
@@ -34,20 +34,30 @@ def get_groups(request):
 
 @api_view(['GET'])
 def get_groups_user(request):
-    return validate_request_and_execute('GET', request, service.get_groups_user)
+    # return validate_request_and_execute('GET', request, service.get_groups_user)
+    return service.get_groups_user(request)
 
 
 @api_view(['GET'])
 def get_all_user_permissions(request):
-    return validate_request_and_execute('GET', request, service.get_all_user_permissions)
+    # return validate_request_and_execute('GET', request, service.get_all_user_permissions)
+    return service.get_all_user_permissions(request)
 
 @api_view(['GET'])
 def entities_permissions(request):
-    return validate_request_and_execute('GET', request, service.entities_permissions)
+    # return validate_request_and_execute('GET', request, service.entities_permissions)
+    return service.entities_permissions(request)
 
 @api_view(['GET'])
 def get_entities(request):
-    return validate_request_and_execute('GET', request, service.get_entities)
+    #return validate_request_and_execute('GET', request, service.get_entities)
+    return service.get_entities(request)
+
+
+@api_view(['PUT'])
+def edit_user(request):
+    return validate_request_and_execute('PUT', request, service.edit_user)
+
 
 
 
@@ -94,83 +104,51 @@ def update_group_permission(request):
 
 # Render page-s
 def manage_users_view(request):
-    precheck = is_valid_user(request)
-    if precheck is not None:
-        return precheck
-
-    # users = User.objects.all().values()
-    return render(request,
-                  'cpindex.html', {
-                      'contentpage': 'manage_users.html',
-                      # 'users': json.dumps(list(users),
-                      #                     default=serialize_datetime),
-                  }
-                  )
-
-
-def manage_single_user_view(request, id):
-    precheck = is_valid_user(request)
-    if precheck is not None:
-        return precheck
-
-    user = None
-    try:
-        # All OK. Superuser has full access.
-        # data = service.get_single_user_data_view(id)
-        return render(request,
-                      'cpindex.html',
-                      {'contentpage': 'manage_single_user.html',
-                       'user_id': id,
-                       # 'data': data
-                       }
-                      )
-    except Exception:
-        # User doesn't exists.
-        return render(request,
-                      'cpindex.html',
-                      {
-                          'contentpage': 'users_groups_error_page.html',
-                          'msg': f'Following user with user id {id}, cannot be found.'
-                      },
-                      status=500
-                      )
-
-
-def manage_groups_view(request):
     # precheck = is_valid_user(request)
     # if precheck is not None:
     #     return precheck
 
-    # groups = Group.objects.all()
-    return render(request,
+    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    if service.can(uid, 'e0', 'p7'):
+        return render(request,
                   'cpindex.html',
-                  {'contentpage': 'manage_groups.html',
-                   # 'groups': json.dumps([{"id": g.id,
-                   #                        "name": g.name} for g in groups]),
-                   }
-                  )
-
-
-def manage_single_group_view(request, id):
-    precheck = is_valid_user(request)
-    if precheck is not None:
-        return precheck
-    try:
-        # All OK. Superuser has full access.
-        data = service.get_single_group_data_view(id)
-
-        return render(request,
-                      'cpindex.html',
-                      {'contentpage': 'manage_single_group.html',
-                              'data': data}
-                      )
-    except Exception:
-        # Group doesn't exists.
-        return render(request,
-                      'cpindex.html',
+                       {'contentpage': 'manage_users.html'}
+                    )
+    else:
+        return render(request, 'cpindex.html',
                       {'contentpage': 'users_groups_error_page.html',
-                              'msg': f'Following group with group id {id}, cannot be found.'
-                                },
-                      status=500
-                      )
+                              'msg': 'Permission denied!'})
 
+
+
+def manage_single_user_view(request, id):
+    # precheck = is_valid_user(request)
+    # if precheck is not None:
+    #     return precheck
+    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    if service.can(uid, 'e0', 'p7'):
+        return render(request,
+                  'cpindex.html',
+                       {'contentpage': 'manage_single_user.html',
+                               'user_id': id}
+                    )
+    else:
+        return render(request, 'cpindex.html',
+                      {'contentpage': 'users_groups_error_page.html',
+                              'msg': 'Permission denied!'})
+
+
+def manage_rights_view(request):
+    # precheck = is_valid_user(request)
+    # if precheck is not None:
+    #     return precheck
+    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    if service.can(uid, 'e0', 'p6'):
+        return render(request,
+                  'cpindex.html',
+                       {'contentpage': 'manage_rights.html'}
+                    )
+    else:
+        return render(request, 'cpindex.html',
+                      {'contentpage': 'users_groups_error_page.html',
+                              'msg': 'Permission denied!'})

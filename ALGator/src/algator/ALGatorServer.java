@@ -8,6 +8,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import si.fri.algator.authuser.CanUtil;
 import si.fri.algator.server.ASGlobal;
 import si.fri.algator.server.ASLog;
 import si.fri.algator.client.Requester;
@@ -95,6 +96,11 @@ public class ALGatorServer {
       boolean serverIsAlive = serverResponse.equals(ASGlobal.REQ_CHECK_A);
 
       // secure("/path/to/keystore.jks", "password", null, null);
+      CanUtil cu = new CanUtil();
+      System.out.println(cu.can("u3", "e0", "p0"));
+      System.out.println(cu.can("u1", "e0", "p0"));
+      System.out.println(cu.can("u1", "e0", "p1"));
+      System.out.println(cu.can("u0", "e0", "p0"));
 
       ASLog.doVerbose = true;
       

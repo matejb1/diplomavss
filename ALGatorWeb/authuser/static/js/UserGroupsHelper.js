@@ -1,3 +1,19 @@
+function saveUser(id) {
+    sendRequest('/permissions/user/edit_user',
+                 {
+                    'id': id,
+                    'username': $('#username').val(),
+                    'email': $('#email').val(),
+                    'isSuperUser': $('#isSuperUser').is(":checked"),
+                    'isStaff': $('#isStaff').is(":checked"),
+                    'isActive': $('#isActive').is(":checked"),
+                 },
+                'PUT').then((resolve, reject) => {
+                    alert('Successfully modified user.');
+                    document.location.reload();
+                });
+}
+
 function searchByField(table) {
     let s = $("#searchField").val();
     $(table).empty();
