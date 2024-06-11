@@ -96,13 +96,9 @@ function renderUsersTable(request) {
 }
 
 function delete_group(event) {
-    $.ajax({
-        url: '/permissions/groups/remove_group',
-        data: {"group_id": event.value },
-        type: 'DELETE',
-        success: function(data, status) {
-            alert(status == "success" ? "Group has been deleted!" : "Cannot delete this group!");
-        }
+    sendRequest('/permissions/groups/remove_group', {"group_id": event.value }, 'DELETE').then((resolve, reject) => {
+        alert("Group has been deleted!");
+        document.location.reload();
     });
 }
 
@@ -144,18 +140,9 @@ function post_permission(event) {
         "entity_id": $("#entity-name").val(),
     };
 
-
-
-    $.ajax({
-        url: endpoint,
-        data: dataToSend,
-        type: 'PUT',
-        success: function(data, status) {
-            if(status == "success"){
-                alert("Permission has been added!");
-                document.location.reload();
-            }
-        }
+    sendRequest(endpoint, dataToSend, 'PUT').then((resolve, reject) => {
+        alert('Permission has been added!');
+        document.location.reload();
     });
 }
 
@@ -171,17 +158,9 @@ function update_permission(event) {
     let isUserView = dataToSend.id[0] == 'u';
     let endpoint = `/permissions/${isUserView ? "users": "groups"}/update_permission`;
 
-
-    $.ajax({
-        url: endpoint,
-        data: dataToSend,
-        type: 'PUT',
-        success: function(data, status) {
-            if(status == "success"){
-                alert("Permission has been deleted!");
-                document.location.reload();
-            }
-        }
+    sendRequest(endpoint, dataToSend, 'PUT').then((resolve, reject) => {
+        alert('Permission has been deleted!');
+        document.location.reload();
     });
 }
 
@@ -226,37 +205,30 @@ function loadRightsPage(){
 }
 
 function post_group() {
-    $.ajax({
-        url: '/permissions/groups/add_group',
-        data: {"name": $("#group_name").val().trim()},
-        type: 'POST',
-        success: function(data, status) {
-            if(status == "success"){
-                alert("Group has been added!");
-                document.location.reload();
-            }
-        }
+    sendRequest('/permissions/groups/add_group', {"name": $("#group_name").val().trim()}, 'POST').then((resolve, reject) => {
+        alert("Group has been added!");
+        document.location.reload();
     });
 }
 
 function add_user_to_group(event) {
-
-
     sendRequest('/permissions/groups/add_user_to_group',
-                 {"gid": $("#addusertogroup_groupname").val(),
-                  "username": $("#addusertogroup_username").val().trim(),},
-                'POST').then((resolve, reject) => {
-                    alert('Added user to group.');
-                    document.location.reload();
-                });
+                    {"gid": $("#addusertogroup_groupname").val(),
+                    "username": $("#addusertogroup_username").val().trim(),},
+                    'POST').then((resolve, reject) => {
+        alert('Added user to group.');
+        document.location.reload();
+    });
 }
 
 function remove_user_from_group(event) {
-
     sendRequest('/permissions/groups/remove_user_from_group',
-    {"gid": $("#removeuserfromgroup_groupname").val(),
-     "username": $("#removeuserfromgroup_username").val().trim(),
-    }, 'DELETE');
+            {"gid": $("#removeuserfromgroup_groupname").val(),
+            "username": $("#removeuserfromgroup_username").val().trim(),
+            }, 'DELETE').then((resolve, reject) => {
+        alert('User has been deleted from group.');
+        document.location.reload();
+    });
 }
 
 

@@ -5,6 +5,11 @@ services:
     container_name: bj
     volumes:
       - /path/to/ALGATOR_ROOT:/ALGATOR_ROOT
+    environment:
+      ALGATOR_ROOT: '/ALGATOR_ROOT'
+      ALGATORWEB_BASE_URL: ${ALGATORWEB_BASE_URL}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
   nginx:
     image: nginx
     container_name: mynginx1

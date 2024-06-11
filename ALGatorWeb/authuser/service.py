@@ -77,22 +77,27 @@ def remove_user_from_group(response, data):
     return response
 
 def add_permission_to_user(response, data):
-    pid = PermissionType.objects.get(pk=data["permission_id"])
-    eid = Entities.objects.get(pk=data["entity_id"])
-    uid = Usr.objects.get(user=User.objects.get(username=data["id"]))
+    try:
+        pid = PermissionType.objects.get(pk=data["permission_id"])
+        eid = Entities.objects.get(pk=data["entity_id"])
 
-    epu, created = EntityPermissionUser.objects.get_or_create(entity=eid, user=uid)
-    response.content_type = "application/json"
+        usr = try_get_user(response)
+        if not can(usr, eid, 'p1'):
+            raise Exception
+        uid = Usr.objects.get(user=User.objects.get(username=data["id"]))
 
-    if not created and not contains(epu.value, pid.value):
-        epu.value |= pid.value
-        epu.save()
-        response.status_code = 201
-    elif created:
-        epu.value = pid.value
-        epu.save()
-        response.status_code = 201
-    else:
+        epu, created = EntityPermissionUser.objects.get_or_create(entity=eid, user=uid)
+        response.content_type = "application/json"
+
+        if not created and not contains(epu.value, pid.value):
+            epu.value |= pid.value
+            epu.save()
+            response.status_code = 201
+        elif created:
+            epu.value = pid.value
+            epu.save()
+            response.status_code = 201
+    except Exception:
         response.status_code = 500
         response.content = {"Error": "User exists in this group."}
     return response
