@@ -1,8 +1,8 @@
 version: '3.1'
 services:
-  bj:
-    image: bj
-    container_name: bj
+  alg-srv:
+    image: alg-srv
+    container_name: alg-srv
     volumes:
       - /path/to/ALGATOR_ROOT:/ALGATOR_ROOT
     environment:

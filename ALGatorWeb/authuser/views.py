@@ -83,6 +83,11 @@ def remove_user_from_group(request):
     return validate_request_and_execute('DELETE', request, service.remove_user_from_group)
 
 @api_view(['DELETE'])
+def remove_user(request):
+    return validate_request_and_execute('DELETE', request, service.remove_user)
+
+
+@api_view(['DELETE'])
 def remove_group(request):
     return validate_request_and_execute('DELETE', request, service.remove_group)
 
@@ -109,7 +114,7 @@ def manage_users_view(request):
     #     return precheck
 
     uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'p7'):
+    if service.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_users.html'}
@@ -126,7 +131,7 @@ def manage_single_user_view(request, id):
     # if precheck is not None:
     #     return precheck
     uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'p7'):
+    if service.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_single_user.html',
@@ -143,7 +148,7 @@ def manage_rights_view(request):
     # if precheck is not None:
     #     return precheck
     uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'p6'):
+    if service.can(uid, 'e0', 'can_edit_rights'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_rights.html'}

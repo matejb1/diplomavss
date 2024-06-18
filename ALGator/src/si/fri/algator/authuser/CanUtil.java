@@ -79,7 +79,7 @@ public class CanUtil {
 
     }
 
-    public boolean can(String uid, String eid, String pid) {
+    public boolean can(String uid, String eid, String codename) {
         long unixCurrentTime = System.currentTimeMillis() / 1000L;
 
         if(unixCurrentTime >= this.expirationTime)
@@ -94,7 +94,7 @@ public class CanUtil {
 
             params.add(new BasicNameValuePair("uid", uid));
             params.add(new BasicNameValuePair("eid", eid));
-            params.add(new BasicNameValuePair("pid", pid));
+            params.add(new BasicNameValuePair("codename", codename));
 
             request.setEntity(new UrlEncodedFormEntity(params, StandardCharsets.UTF_8));
             ClassicHttpResponse response = (ClassicHttpResponse)client.execute(request);

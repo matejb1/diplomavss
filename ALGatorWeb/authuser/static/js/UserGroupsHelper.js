@@ -1,5 +1,5 @@
 function saveUser(id) {
-    sendRequest('/permissions/user/edit_user',
+    sendRequest('/permissions/users/edit_user',
                  {
                     'id': id,
                     'username': $('#username').val(),
@@ -12,6 +12,13 @@ function saveUser(id) {
                     alert('Successfully modified user.');
                     document.location.reload();
                 });
+}
+
+function removeUser(id) {
+    sendRequest('/permissions/users/remove_user', {'uid': id}, 'DELETE').then((resolve, reject) => {
+        alert('Successfully deleted user.');
+        window.location.replace("/permissions/users");
+    });
 }
 
 function searchByField(table) {
@@ -38,9 +45,9 @@ function appendPermissionOptions() {
     let content = "";
     for(let item of allPermissions) {
         can_dict.hasOwnProperty
-        can($('#entity-name').val(), item.pk).then((resolve, reject) => {
+        can($('#entity-name').val(), item.fields.codename).then((resolve, reject) => {
             if(resolve)
-                $('#permission-name').append(`<option value='${item.pk}' title='${item.fields.codename}'>${item.fields.name}</option>`);
+                $('#permission-name').append(`<option value='${item.fields.codename}' title='${item.pk}'>${item.fields.name}</option>`);
         });
 
     }
@@ -52,7 +59,7 @@ function appendEnttiesOptions() {
     let first = true;
     for(let e of entities) {
         let eid = e.pk;
-        can(eid, 'p1').then((data) => {
+        can(eid, 'can_write').then((data) => {
             if(data)
                 $('#entity-name').append(`<option value='${eid}'>${eid}</option>`);
             if(data && first){
@@ -109,7 +116,7 @@ function renderPermissionTable(data) {
     for(let item of data) {
         let eid = item[0], pvalue = item[1], isPrivate = item[2], userGroup = item[3];
 
-        can(eid, 'p1').then((data) => {
+        can(eid, 'can_write').then((data) => {
             let c = data;
             if(!c) return;
             for(let p of allPermissions) {

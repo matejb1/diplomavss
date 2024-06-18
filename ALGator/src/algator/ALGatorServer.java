@@ -97,10 +97,10 @@ public class ALGatorServer {
 
       // secure("/path/to/keystore.jks", "password", null, null);
       CanUtil cu = new CanUtil();
-      System.out.println(cu.can("u3", "e0", "p0"));
-      System.out.println(cu.can("u1", "e0", "p0"));
-      System.out.println(cu.can("u1", "e0", "p1"));
-      System.out.println(cu.can("u0", "e0", "p0"));
+      System.out.println(cu.can("u3", "e0", "can_read"));
+      System.out.println(cu.can("u1", "e0", "can_read"));
+      System.out.println(cu.can("u1", "e0", "can_write"));
+      System.out.println(cu.can("u0", "e0", "can_read"));
 
       ASLog.doVerbose = true;
       

@@ -65,6 +65,20 @@ def remove_group(response, data):
         response.content = {"Error": "User isn't present in this group."}
     return response
 
+def remove_user(response, data):
+    response.content_type = "application/json"
+    u = try_get_user(response)
+    try:
+        if can(u, 'e0', 'can_edit_users'):
+            run_query("DELETE FROM auth_user WHERE id = %s", [int(data['uid'])])
+            response.status_code = 203
+        else:
+            raise Exception
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User isn't present in this group."}
+    return response
+
 def remove_user_from_group(response, data):
     response.content_type = "application/json"
     try:
@@ -78,11 +92,11 @@ def remove_user_from_group(response, data):
 
 def add_permission_to_user(response, data):
     try:
-        pid = PermissionType.objects.get(pk=data["permission_id"])
+        pid = PermissionType.objects.get(codename=data["permission_id"])
         eid = Entities.objects.get(pk=data["entity_id"])
 
         usr = try_get_user(response)
-        if not can(usr, eid, 'p1'):
+        if not can(usr, eid, 'can_write'):
             raise Exception
         uid = Usr.objects.get(user=User.objects.get(username=data["id"]))
 
@@ -104,7 +118,7 @@ def add_permission_to_user(response, data):
 
 
 def add_permission_to_group(response, data):
-    pid = PermissionType.objects.get(pk=data["permission_id"])
+    pid = PermissionType.objects.get(codename=data["permission_id"])
     eid = Entities.objects.get(pk=data["entity_id"])
     gid = Group.objects.get(pk=data["id"])
 
@@ -273,11 +287,11 @@ def can_request(request):
     # else:
     uid = try_get_user(request)
     response = HttpResponse()
-    response.content = can(data["uid"] if "uid" in data else uid, data["eid"], data["pid"])
+    response.content = can(data["uid"] if "uid" in data else uid, data["eid"], data["codename"])
     return response
 
 
-def can(uid, eid, pid):
+def can(uid, eid, codename):
     try:
         if uid == 'u0':  # Root
             return True
@@ -287,8 +301,8 @@ def can(uid, eid, pid):
         if e.is_private:  # Entity is private
             return False
         user = Usr.objects.get(pk=uid)
-        p = PermissionType.objects.get(pk=pid)
-        pfc = PermissionType.objects.get(value=0xFFFF)
+        p = PermissionType.objects.get(codename=codename)
+        pfc = PermissionType.objects.get(codename='full_control')
         try:
             epu = EntityPermissionUser.objects.get(entity=e, user=user)
             if contains(epu.value, p.value, pfc.value):

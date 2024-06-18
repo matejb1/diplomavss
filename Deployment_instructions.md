@@ -7,15 +7,16 @@
 - Step 3: Get certificates 
 - Step 4: Run stack
 
+- Opomba: prej sta bili sliki poimenovani bj (ALGatorServer --> alg-srv) in dj (ALGatorWeb --> alg-web); konfiguracijo še nisem uspel stestirati in zdeployat na svoje testno okolje. Naj ne bi smelo biti nobenega vpliva.
 
 ```bash
 cd ALGator
-docker build -t bj . 
+docker build -t alg-srv . 
 # configure .env, nginx.conf and docker-compose.yml
 # In nginx.conf you need to replace to your domain
 
 cd ../ALGatorWeb
-docker build -t dj . 
+docker build -t alg-web . 
 # configure .env, nginx.conf and docker-compose.yml
 # In nginx.conf you need to replace to your domain
 
@@ -24,9 +25,9 @@ docker build -t dj .
 docker compose up -d # run stack
 
 # One time job - begin
-docker exec -it dj python manage.py collectstatic # Django zbere vse statične datoteke v eno mapo (trenutno skonfigurirano na 'assets'); Potem jih Nginx servira.
+docker exec -it alg-web python manage.py collectstatic # Django zbere vse statične datoteke v eno mapo (trenutno skonfigurirano na 'assets'); Potem jih Nginx servira.
 docker exec -it db mysql -u root -palgator -e "GRANT ALL PRIVILEGES ON algator.* TO algator@'%';" # Daj polne pravice na userja; Če bo kakšen error 2002, verjetno je potrebo še malo počalati, da se kontejner dokonca zažene
-docker exec -it dj sh -c "export ALGATOR_ROOT='/ALGATOR_ROOT'; python manage.py migrate" # Naredi migracije podatkov
+docker exec -it alg-web sh -c "export ALGATOR_ROOT='/ALGATOR_ROOT'; python manage.py migrate" # Naredi migracije podatkov
 
 cp authuser/migrations/01_patch_script.sql /path/to/db # Kopiraj skripto v bazo
 docker exec -it db mysql -u root -palgator -e 'source /var/lib/mysql/01_patch_script.sql' # Zaženi skripto v bazi (v skripti: triggerji, procedure...)
