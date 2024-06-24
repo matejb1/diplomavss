@@ -14,9 +14,6 @@ conda install python==3.10
 # Install dependencies
 pip install -r requirements.txt 
 
-# Create certificates (don't use it in production) --> for Django
-openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
-
 # Open algator_global.py (configure connection, if you need to)
 
 # Setup environment variables (This works on Linux).
@@ -31,12 +28,14 @@ mysql -u root -e "CREATE DATABASE algator;"
 # Make migrations
 python manage.py migrate
 
-# Create superuser
-python manage.py createsuperuser
+# Import patch script to MySQL
+mysql -u root -palgator -e 'source /path/to/ALGatorWeb/authuser/migrations/01_patch_script.sql'
+# or open some kind of SQL editor such as (MySQL Workbench, phpmyadmin ...), copy text inside this file (01_patch_script.sql), paste to editor, run it.
 
-# Run a server (new way)
-python manage.py runserver_plus --cert-file /path/to/cert.pem --key-file /path/to/certs/key.pem 0.0.0.0:8000
 
+python manage.py runserver
+
+# UI: http://localhost:80
 ```
 
 ## ALGator Server
@@ -52,11 +51,11 @@ export ALGATOR_ROOT=/path/to/ALGATOR_ROOT
 SET ALGATOR_ROOT=C:\\path\\to\\ALGATOR_ROOT
 
 
-# Generate keystore certificate (probably you shouldn't use in production)
-keytool -genkey -keyalg RSA -alias selfsigned -keystore keystore.jks -storepass password -validity 360 -keysize 2048
+SET ALGATORWEB_BASE_URL=http://localhost:8000
 
-# Open ALGatorServer.java replace line "secure" to correct path. If you changed keystore password, you need to change in the code as well.
-
+# Uporabnik je iz baze --> tabela: auth_user
+SET DATABASE_USER=root
+SET DATABASE_PASSWORD=root
 
 # If you're doing that in IDE probably you can skip next steps, just click on Run button.
 
@@ -64,5 +63,7 @@ keytool -genkey -keyalg RSA -alias selfsigned -keystore keystore.jks -storepass 
 
 # Run as normal 
 java algator.ALGatorServer
+# or 
+java -jar ALGator.jar
 
 ```
