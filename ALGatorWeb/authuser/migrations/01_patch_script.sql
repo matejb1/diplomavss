@@ -1,44 +1,36 @@
 USE algator;
 
-ALTER TABLE authuser_user DROP FOREIGN KEY authuser_user_user_id_8be030c8_fk_auth_user_id;
 ALTER TABLE authuser_entities CHANGE COLUMN is_private is_private BOOL NOT NULL DEFAULT TRUE;
+ALTER TABLE authuser_entities DROP CONSTRAINT authuser_entities_parent_id_f86a251d_fk_authuser_entities_id;
+ALTER TABLE authuser_entities ADD CONSTRAINT entiteta_omejitev FOREIGN KEY(parent_id) REFERENCES authuser_entities(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE authuser_entitypermissiongroup DROP CONSTRAINT authuser_entitypermi_entity_id_214eee19_fk_authuser_;
+ALTER TABLE authuser_entitypermissiongroup ADD CONSTRAINT entiteta_omejitev_epg FOREIGN KEY(entity_id) REFERENCES authuser_entities(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE authuser_entitypermissionuser DROP CONSTRAINT authuser_entitypermi_entity_id_0098dda2_fk_authuser_;
+ALTER TABLE authuser_entitypermissiongroup ADD CONSTRAINT entiteta_omejitev_epu FOREIGN KEY(entity_id) REFERENCES authuser_entities(id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 DELIMITER //
 CREATE TRIGGER ADD_ENTITY_TRIGGER
 AFTER INSERT ON authuser_entities
 FOR EACH ROW
 BEGIN
-    DECLARE eid INTEGER;
-    DECLARE et INTEGER;
+    DECLARE eid VARCHAR(12);
+    DECLARE et VARCHAR(12);
 
-    SET @eid := NEW.id;
-    SET @et := (SELECT entity_type_id FROM authuser_entities WHERE id = @eid);
+    SET eid := NEW.id;
+    SET et := (SELECT entity_type_id FROM authuser_entities WHERE id = eid);
 
-    IF @et = 'et1' THEN
+    IF et = 'et1' THEN
   	    INSERT INTO authuser_entitypermissiongroup (group_id, entity_id, value) VALUES
-        ('g0', @eid, 49),
-        ('g1', @eid, 1);
-    ELSEIF @et IN('et2', 'et3', 'et5') THEN
+        ('g0', eid, 49),
+        ('g1', eid, 1);
+    ELSEIF et IN('et2', 'et3', 'et5') THEN
   	    INSERT INTO authuser_entitypermissiongroup (group_id, entity_id, value) VALUES
-        ('g0', @eid, 1);
+        ('g0', eid, 1);
     END IF;
 END;//
 DELIMITER ;
-
-
-DELIMITER //
-CREATE TRIGGER ADD_USER_TRIGGER
-AFTER INSERT ON auth_user
-FOR EACH ROW
-BEGIN
-	DECLARE uid INTEGER;
-    SET uid := NEW.id;
-    INSERT INTO authuser_user (id, user_id) VALUES (CONCAT('u',uid-1), uid);
-END;//
-DELIMITER ;
-
-
-
 
 DELIMITER //
 CREATE PROCEDURE CASCADE_DELETE_USER1(IN uid VARCHAR(12))
@@ -101,13 +93,13 @@ DELIMITER ;
 
 DELIMITER //
 CREATE TRIGGER REMOVE_USER_TRIGGER
-BEFORE DELETE ON auth_user
+BEFORE DELETE ON authuser_user
 FOR EACH ROW
 BEGIN
 	DECLARE uid VARCHAR(12);
-    SET uid := (SELECT id FROM authuser_user WHERE user_id = OLD.id LIMIT 1);
+    SET uid := OLD.uid;-- (SELECT id FROM authuser_user WHERE user_id = OLD.id LIMIT 1);
     CALL CASCADE_DELETE_USER(uid);
-    DELETE FROM authuser_user WHERE id = uid;
+    -- DELETE FROM authuser_user WHERE id = uid;
 END;//
 DELIMITER ;
 

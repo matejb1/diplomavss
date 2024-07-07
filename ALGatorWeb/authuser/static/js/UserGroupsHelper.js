@@ -15,7 +15,8 @@ function saveUser(id) {
 }
 
 function removeUser(id) {
-    sendRequest('/permissions/users/remove_user', {'uid': id}, 'DELETE').then((resolve, reject) => {
+    let uid = `u${id-1}`;
+    sendRequest('/permissions/users/remove_user', {'uid': uid}, 'DELETE').then((resolve, reject) => {
         alert('Successfully deleted user.');
         window.location.replace("/permissions/users");
     });
@@ -36,16 +37,14 @@ function appendGroupOptions(table='#group-name') {
     for(let item of allGroups) {
         content += `<option value='${item.pk}' title='${item.fields.name}'>${item.fields.name}</option>`;
     }
-    $(table).append(content);
+    $(table).append(content).sort((x, y) => x.text == b.text ? 0 : x.text < y.text ? -1 : 1);
 }
 
 
 function appendPermissionOptions() {
     $('#permission-name').find("option").remove().end();
-    let content = "";
-    for(let item of allPermissions) {
-        can_dict.hasOwnProperty
-        can($('#entity-name').val(), item.fields.codename).then((resolve, reject) => {
+    for(let item of userPermissions) {
+        can({'eid': $('#entity-name').val(), 'codename': item.fields.codename}).then((resolve, reject) => {
             if(resolve)
                 $('#permission-name').append(`<option value='${item.fields.codename}' title='${item.pk}'>${item.fields.name}</option>`);
         });
@@ -59,10 +58,8 @@ function appendEnttiesOptions() {
     let first = true;
     for(let e of entities) {
         let eid = e.pk;
-        can(eid, 'can_write').then((data) => {
-            if(data)
-                $('#entity-name').append(`<option value='${eid}'>${eid}</option>`);
-            if(data && first){
+            $('#entity-name').append(`<option value='${eid}'>${eid}</option>`);
+            if(first){
                 first = false;
                 sendRequest('/permissions/groups/get_groups', {"eid": eid}, 'POST').then((resolve, reject) => {
                     allGroups = JSON.parse(resolve);
@@ -72,14 +69,21 @@ function appendEnttiesOptions() {
                     appendPermissionOptions();
                 });
             }
-        });
     }
 
 
     document.querySelector('#entity-name').addEventListener('change', (e) => {
-        sendRequest('/permissions/groups/get_groups', {"eid": e.target.value}, 'POST').then((resolve, reject) => {
+        let eid = e.target.value;
+
+        sendRequest('/permissions/groups/get_groups', {"eid": eid}, 'POST').then((resolve, reject) => {
             allGroups = JSON.parse(resolve);
             appendGroupOptions();
+        });
+
+
+        sendRequest('/permissions/users/get_permissions', {'eid': eid}, 'POST').then((resolve, reject) => {
+            userPermissions = JSON.parse(resolve);
+            appendPermissionOptions();
         });
     });
 }
@@ -114,27 +118,22 @@ function renderPermissionTable(data) {
     let i = 1;
     searchRows = [];
     for(let item of data) {
-        let eid = item[0], pvalue = item[1], isPrivate = item[2], userGroup = item[3];
-
-        can(eid, 'can_write').then((data) => {
-            let c = data;
-            if(!c) return;
-            for(let p of allPermissions) {
-                let v = p.fields.value;
-                if((item[1] & v) == v){
-                    let content = `<tr scope='row'>
-                                   <td>${i++}</td>
-                                   <td>${item[0]}</td>
-                                   <td title=${p.pk}>${p.fields.name}</td>
-                                   <td><input type='checkbox' ${item[2] == 1 ? 'checked' : ''} value=${item[2]} /></td>
-                                   <td>${item[3]}</td>
-                                   <td><button type='submit' class='btn btn-danger' onclick='update_permission(this)' data-entity_id="${item[0]}" data-permission_id='${p.pk}' data-usergroup='${item[4]}' value='${v}'>DELETE</button></td>
-                                   </tr>`;
-                    searchRows.push(content);
-                    $(table).append(content);
-                }
+        let eid = item[0], pvalue = item[1], isPrivate = item[2], userGroup = item[3], idUserGroup = data[4];
+        for(let p of allPermissions) {
+        let v = p.fields.value, fc = 65535;
+        if((pvalue == fc && v == fc) || (pvalue < fc && (pvalue & v) == v)){
+            let content = `<tr scope='row'>
+                            <td>${i++}</td>
+                            <td>${eid}</td>
+                            <td title=${p.pk}>${p.fields.name}</td>
+                            <td><input type='checkbox' ${isPrivate == 1 ? 'checked' : ''} value=${isPrivate} /></td>
+                            <td>${userGroup}</td>
+                            <td><button type='submit' class='btn btn-danger' onclick='update_permission(this)' data-entity_id="${eid}" data-permission_id='${p.pk}' data-usergroup='${item[4]}' value='${v}'>DELETE</button></td>
+                            </tr>`;
+            searchRows.push(content);
+            $(table).append(content);
             }
-        });
+        }
     }
 }
 
@@ -194,22 +193,29 @@ function sendRequest(endpoint, dataToSend, method){
 
 function loadRightsPage(){
 
-    let requests = [sendRequest('/permissions/users/get_permissions', null, 'GET'),
-                    sendRequest('/permissions/entities_permissions', null, 'GET'),
+    let requests = [sendRequest('/permissions/entities_permissions', null, 'GET'),
                     sendRequest('/permissions/groups/get_groups_user', null, 'GET'),
                     sendRequest('/permissions/get_entities', null, 'GET'),
+                    sendRequest('/permissions/get_all_permission_types', null, 'GET'),
                     // sendRequest('/permissions/groups/get_groups', {"eid": eid}, 'POST'),
                    ];
     Promise.all(requests).then((result) => {
-        allPermissions = JSON.parse(result[0]);
-        allEntties = JSON.parse(result[1]);
-        userGroups = JSON.parse(result[2]);
-        entities = JSON.parse(result[3]);
-        renderPermissionTable(allEntties);
-        appendEnttiesOptions();
+
+        allEntties = JSON.parse(result[0]);
+        userGroups = JSON.parse(result[1]);
+        entities = JSON.parse(result[2]);
+        allPermissions = JSON.parse(result[3]);
+        sendRequest('/permissions/users/get_permissions', {'eid': entities[0].pk}, 'POST').then((resolve, reject) => {
+            userPermissions = JSON.parse(resolve);
+            appendEnttiesOptions();
+            renderPermissionTable(allEntties);
+        });
         renderGroupsTable();
+
     });
+
 }
+
 
 function post_group() {
     sendRequest('/permissions/groups/add_group', {"name": $("#group_name").val().trim()}, 'POST').then((resolve, reject) => {

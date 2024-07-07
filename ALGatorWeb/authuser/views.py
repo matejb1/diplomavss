@@ -7,7 +7,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import service
 from .helper import *
-from .models import User as Usr, Group
 from .serializers import serialize_datetime, MyTokenObtainPairSerializer
 
 
@@ -25,6 +24,10 @@ def get_users(request):
     return validate_request_and_execute('GET', request, service.get_users)
 
 @api_view(['GET'])
+def get_all_permission_types(request):
+    return service.get_all_permission_types(request)
+
+@api_view(['GET'])
 def get_user(request, id):
     return validate_request_and_execute('GET', request, service.get_user, id)
 
@@ -38,10 +41,9 @@ def get_groups_user(request):
     return service.get_groups_user(request)
 
 
-@api_view(['GET'])
-def get_all_user_permissions(request):
-    # return validate_request_and_execute('GET', request, service.get_all_user_permissions)
-    return service.get_all_user_permissions(request)
+@api_view(['POST'])
+def get_all_user_permissions_by_eid(request):
+    return validate_request_and_execute('POST', request, service.get_all_user_permissions_by_eid)
 
 @api_view(['GET'])
 def entities_permissions(request):
@@ -92,8 +94,21 @@ def remove_group(request):
     return validate_request_and_execute('DELETE', request, service.remove_group)
 
 @api_view(['POST'])
+def add_user(request):
+    return validate_request_and_execute('POST', request, service.add_user)
+
+
+@api_view(['POST'])
 def add_user_to_group(request):
     return validate_request_and_execute('POST', request, service.add_user_to_group)
+
+@api_view(['POST'])
+def add_entity(request):
+    return validate_request_and_execute('POST', request, service.add_entity)
+
+@api_view(['DELETE'])
+def remove_entity(request):
+    return validate_request_and_execute('DELETE', request, service.remove_entity)
 
 
 
@@ -113,7 +128,7 @@ def manage_users_view(request):
     # if precheck is not None:
     #     return precheck
 
-    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    uid = request.user.uid if request.user.is_authenticated else 'u1'
     if service.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
@@ -130,7 +145,7 @@ def manage_single_user_view(request, id):
     # precheck = is_valid_user(request)
     # if precheck is not None:
     #     return precheck
-    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    uid = request.user.uid if request.user.is_authenticated else 'u1'
     if service.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
@@ -147,7 +162,7 @@ def manage_rights_view(request):
     # precheck = is_valid_user(request)
     # if precheck is not None:
     #     return precheck
-    uid = Usr.objects.get(user=request.user).id if request.user.is_authenticated else 'u1'
+    uid = request.user.uid if request.user.is_authenticated else 'u1'
     if service.can(uid, 'e0', 'can_edit_rights'):
         return render(request,
                   'cpindex.html',

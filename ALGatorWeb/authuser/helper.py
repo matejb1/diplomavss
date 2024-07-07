@@ -38,7 +38,7 @@ def get_tokens_from_header(request):
 
 def get_credentials_jwt(token):
     payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-    return {"user_id": payload["user_id"],
+    return {"uid": payload["uid"],
             "username": payload["username"],
             "is_superuser": payload["is_superuser"]}
 
@@ -56,7 +56,7 @@ def try_to_get_tokens(request):
 
 def try_get_user(response):
     try:
-        return f'u{get_credentials_jwt(try_to_get_tokens(response)["access"])["user_id"] - 1}'
+        return get_credentials_jwt(try_to_get_tokens(response)["access"])["uid"]
     except Exception:
         return 'u1'
 

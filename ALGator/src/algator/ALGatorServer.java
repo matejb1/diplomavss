@@ -8,11 +8,12 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import si.fri.algator.authuser.CanUtil;
 import si.fri.algator.server.ASGlobal;
 import si.fri.algator.server.ASLog;
 import si.fri.algator.client.Requester;
 import si.fri.algator.global.ATGlobal;
+
+import static si.fri.algator.authuser.CanUtil.can;
 
 // import static spark.Spark.secure;
 
@@ -96,14 +97,16 @@ public class ALGatorServer {
       boolean serverIsAlive = serverResponse.equals(ASGlobal.REQ_CHECK_A);
 
       // secure("/path/to/keystore.jks", "password", null, null);
-      CanUtil cu = new CanUtil();
-      System.out.println(cu.can("u3", "e0", "can_read"));
-      System.out.println(cu.can("u1", "e0", "can_read"));
-      System.out.println(cu.can("u1", "e0", "can_write"));
-      System.out.println(cu.can("u0", "e0", "can_read"));
 
       ASLog.doVerbose = true;
-      
+
+
+      System.out.println(can("u3", "e0", "can_read"));
+      System.out.println(can("u1", "e0", "can_read"));
+      System.out.println(can("u1", "e0", "can_write"));
+      System.out.println(can("u0", "e0", "can_read"));
+
+
       if (statusOnly) {
         if (serverIsAlive) {
           System.out.println(Requester.askALGatorServer(ASGlobal.REQ_STATUS));

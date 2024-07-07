@@ -11,6 +11,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token['username'] = user.username
         token['is_superuser'] = user.is_superuser
+        token['uid'] = user.uid
         return token
 
 def serialize_datetime(obj):

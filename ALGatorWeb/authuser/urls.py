@@ -9,7 +9,7 @@ urlpatterns = [
     path('users/get_user/<int:id>', views.get_user, name='get_user'),
     path('users/edit_user', views.edit_user, name='edit_user'),
     path('users/remove_user', views.remove_user, name='remove_user'),
-    path('users/get_permissions', views.get_all_user_permissions, name='get_all_user_permissions'),
+    path('users/get_permissions', views.get_all_user_permissions_by_eid, name='get_all_user_permissions_by_eid'),
     path('users/add_permission', views.add_user_permission, name='add_user_permission'),
     path('users/update_permission', views.update_user_permission, name='update_user_permission'),
     path('rights', views.manage_rights_view, name='managerightsview'),
@@ -24,4 +24,8 @@ urlpatterns = [
     path('can', views.can, name='can'),
     path('entities_permissions', views.entities_permissions, name='entities_permissions'),
     path('get_entities', views.get_entities, name='get_entities'),
+    path('add_entity', views.add_entity, name='add_entity'),
+    path('remove_entity', views.remove_entity, name='remove_entity'),
+    path('add_user', views.add_user, name='add_user'),
+    path('get_all_permission_types', views.get_all_permission_types, name='get_all_permission_types'),
 ]

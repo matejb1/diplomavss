@@ -3,7 +3,7 @@ import json
 
 import requests
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-
+from django.contrib.auth import get_user_model
 from authuser.serializers import MyTokenObtainPairSerializer
 from login.forms import *
 from django.contrib.auth.decorators import login_required
