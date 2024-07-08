@@ -1,6 +1,8 @@
+// API Examples
+// can({'uid': 'u0', 'eid': 'e1', 'codename': 'can_write'}).then((data) => {...})
+// can({'eid': 'e1', 'codename': 'can_write'}).then((data) => {...})
+
 var can_dict = {};
-
-
 function can(dataToSend) {
     if(can_dict.hasOwnProperty(`${dataToSend.eid}${dataToSend.codename}`))
         return new Promise((resolve, reject) => {resolve(can_dict[`${dataToSend.eid}${dataToSend.codename}`])});
