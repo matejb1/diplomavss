@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from . import service
 from .helper import *
 from .serializers import serialize_datetime, MyTokenObtainPairSerializer
-
+import authuser.repository as repository
 
 # Create your views here.
 
@@ -59,8 +59,6 @@ def get_entities(request):
 @api_view(['PUT'])
 def edit_user(request):
     return validate_request_and_execute('PUT', request, service.edit_user)
-
-
 
 
 @api_view(['POST'])
@@ -124,12 +122,8 @@ def update_group_permission(request):
 
 # Render page-s
 def manage_users_view(request):
-    # precheck = is_valid_user(request)
-    # if precheck is not None:
-    #     return precheck
-
     uid = request.user.uid if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'can_edit_users'):
+    if repository.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_users.html'}
@@ -142,11 +136,8 @@ def manage_users_view(request):
 
 
 def manage_single_user_view(request, id):
-    # precheck = is_valid_user(request)
-    # if precheck is not None:
-    #     return precheck
     uid = request.user.uid if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'can_edit_users'):
+    if repository.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_single_user.html',
@@ -159,11 +150,8 @@ def manage_single_user_view(request, id):
 
 
 def manage_rights_view(request):
-    # precheck = is_valid_user(request)
-    # if precheck is not None:
-    #     return precheck
     uid = request.user.uid if request.user.is_authenticated else 'u1'
-    if service.can(uid, 'e0', 'can_edit_rights'):
+    if repository.can(uid, 'e0', 'can_edit_rights'):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_rights.html'}

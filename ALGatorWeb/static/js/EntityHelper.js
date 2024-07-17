@@ -4,7 +4,25 @@
 // remove_entity('e4');
 // remove_user('u5');
 // add_user({'username': 'lolek', 'email': 'lolek@bolek.si', 'password': 'Bolek123'});
-function add_entity(dataToSend){
+function add_entity(checkData){
+
+    if(!('name' in checkData) || !('et' in checkData) || !('uid' in checkData)) {
+        throw new Error('add_entity: Missing name, et and uid.')
+    }
+    let dataToSend = {};
+
+    dataToSend.name = checkData.name;
+    dataToSend.et = checkData.et;
+    dataToSend.uid = checkData.uid;
+
+    if('parent' in checkData && checkData.parent != null) {
+        dataToSend.parent = checkData.parent;
+    }
+
+    if('is_private' in checkData && typeof checkData.is_private == "boolean") {
+        dataToSend.is_private = checkData.is_private;
+    }
+
     return new Promise((resolve, reject) => {
         $.ajax({
             url: '/permissions/add_entity',
@@ -29,6 +47,10 @@ function remove_entity(eid){
 }
 
 function add_user(dataToSend){
+    if(!('username' in dataToSend) || !('email' in dataToSend) || !('password' in dataToSend)) {
+        throw new Error("add_user: username, email and password are required!")
+    }
+
     return new Promise((resolve, reject) => {
         $.ajax({
             url: '/permissions/add_user',

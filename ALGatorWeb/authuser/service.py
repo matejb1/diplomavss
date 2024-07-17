@@ -3,356 +3,637 @@ import json
 from django.core import serializers
 from django.http import QueryDict, HttpResponse
 
-from .helper import run_query, jwt_precheck, contains, try_get_user
+from .helper import contains, try_get_user, is_null_or_empty, is_valid_id
 from .models import Group, PermissionType, EntityPermissionUser, Entities, EntityPermissionGroup, Group_User, \
-    User as Usr, EntityType, Entity_permission
-from .queries import *
+    User
 
+import authuser.repository as repository
+from authuser.repository import can
 
-def add_group(response, data):
+def add_group(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_group, and it returns the status of adding.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains name of the group.
+
+    Returns:
+        HttpResponse: Status of adding new group to database.
+    """
+    if response is None or not data or "name" not in data:
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
     try:
-        user = Usr.objects.get(uid=try_get_user(response))
-        gid = f"g{int(Group.objects.latest('id').id[1:])+1}"
-        Group.objects.get_or_create(id=gid, name=data['name'], owner=user)
+        uid = try_get_user(response)
+        repository.add_group(uid, data['name'].strip())
         response.status_code = 201
+        response.content = {"Success": "User exists in this group."}
     except Exception:
         response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
+        response.content = {"Error": "ERROR: Exception occurred at adding new group."}
     return response
 
-def add_user(response, data):
+
+def add_user(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_user, and it returns the status of adding.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains information about the user (username, email, password).
+
+    Returns:
+        HttpResponse: Status of adding new user to database.
+    """
+    if response is None or not data or not ("username" in data and "email" in data and "password" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+
+    response.content_type = "application/json"
     try:
-        Usr.objects.create_user(data['username'], data['email'], data['password'])
+        repository.add_user(data['username'].strip(), data['email'].strip(), data['password'].strip())
         response.status_code = 201
+        response.content = {"Info": "Successfully added new user."}
     except Exception:
         response.status_code = 500
         response.content = {"Error": "Cannot create user."}
     return response
 
-def get_all_permission_types(request):
-    response = HttpResponse()
-    response.content = serializers.serialize("json", PermissionType.objects.all(), )
-    response.content_type = "application/json"
-    return response
 
-def add_user_to_group(response, data):
+def get_all_permission_types(request: HttpResponse) -> HttpResponse:
+    """This function gets all permission types and it returns them.
+
+    Args:
+        request (HttpResponse): Status to be applied to response of requested action.
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if request is None:
+        return HttpResponse({"Error": "ERROR: Response is None."}, status=500)
+    response = HttpResponse()
     response.content_type = "application/json"
     try:
-        uid = Usr.objects.get(username=data["username"])
-        gid = Group.objects.get(pk=data["gid"])
+        response.content = serializers.serialize("json", PermissionType.objects.all(), )
+        response.status_code = 200
+    except Exception:
+        response.content = {"Error": "Cannot get all permission types."}
+        response.status_code = 500
+    return response
 
-        Group_User.objects.get_or_create(user=uid, group=gid)
-        response.status_code = 201
+
+def add_user_to_group(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_user_to_group, and it returns the status of adding.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains information about user and group.
+
+    Returns:
+        HttpResponse: Status of adding user to group.
+    """
+    if response is None or not data or not ("username" in data and "gid" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            repository.add_user_to_group(data["username"].strip(), data["gid"].strip())
+            response.status_code = 201
+            response.content = {"Info": "Successfully added user to group."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
-        response.content = {"Error": "User isn't present in this group."}
-
+        response.content = {"Error": "Cannot add user to group."}
     return response
 
 
-def edit_user(response, data):
+def edit_user(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function edit_user, and returns status of editing.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains information about user.
+
+    Returns:
+        HttpResponse: Status if user was edited successfully.
+    """
+    if response is None or not data or not ("id" in data and "username" in data and "email" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
     try:
-        uid = Usr.objects.get(pk=data['id'])
-        uid.username = data['username']
-        uid.email = data['email']
-        uid.is_superuser = data['isSuperUser'] == 'true'
-        uid.is_staff = data['isStaff'] == 'true'
-        uid.is_active = data['isActive'] == 'true'
-        uid.save()
-        response.status_code = 202
+        is_superuser = False
+        is_staff = False
+        is_active = False
+
+        if "isSuperUser" in data:
+            is_superuser = data['isSuperUser'].strip() == 'true'
+        if "isStaff" in data:
+            is_staff = data['isStaff'].strip() == 'true'
+        if "isActive" in data:
+            is_active = data['isActive'].strip() == 'true'
+
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            repository.edit_user(int(data['id'].strip()),
+                                 data['username'].strip(),
+                                 data['email'].strip(),
+                                 is_superuser,
+                                 is_staff,
+                                 is_active)
+            response.status_code = 202
+            response.content = {"Info": "User has been modified."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
         response.content = {"Error": "Cannot modify user."}
     return response
 
-def remove_group(response, data):
+
+def remove_group(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function remove_group, and returns status of removing the group.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains group_id.
+
+    Returns:
+        HttpResponse: Status if group was deleted successfully.
+    """
+    if response is None or not data or "group_id" not in data:
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
     response.content_type = "application/json"
     try:
         u = try_get_user(response)
-        if u == 'u1':
-            raise Exception
-        Group.objects.get(pk=data['group_id']).delete()
-        response.status_code = 203
-    except Exception:
-        response.status_code = 500
-        response.content = {"Error": "User isn't present in this group."}
-    return response
-
-def remove_user(response, data):
-    response.content_type = "application/json"
-    try:
-        if can(try_get_user(response), 'e0', 'can_edit_users'):
-            run_query("DELETE FROM authuser_user WHERE uid = %s", [data['uid']])
+        if can(u, 'e0', 'can_edit_users'):
+            repository.remove_group(data['group_id'].strip())
             response.status_code = 203
+            response.content = {"Info": "Group has been deleted successfully."}
         else:
-            raise Exception
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
         response.content = {"Error": "User isn't present in this group."}
     return response
 
-def remove_user_from_group(response, data):
+
+def remove_user(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function remove_user, and returns status of removing.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains uid.
+
+    Returns:
+        HttpResponse:Status if user was deleted successfully.
+    """
+    if response is None or not data or "uid" not in data:
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+
     response.content_type = "application/json"
     try:
-        uid = Usr.objects.get(username=data["username"])
-        gid = Group.objects.get(pk=data["gid"])
-        Group_User.objects.get(user=uid, group=gid).delete()
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            repository.remove_user(data['uid'])
+            response.status_code = 203
+            response.content = {"Info": "User was successfully deleted."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
         response.content = {"Error": "User isn't present in this group."}
     return response
 
-def add_permission_to_user(response, data):
-    try:
-        pid = PermissionType.objects.get(codename=data["permission_id"])
-        eid = Entities.objects.get(pk=data["entity_id"])
 
+def remove_user_from_group(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function remove_user_from_group, and returns status of removing.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains username and group id.
+
+    Returns:
+        HttpResponse: Status if user was removed from group successfully.
+    """
+    if response is None or not ("username" in data and "gid" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            repository.remove_user_from_group(data["username"], data["gid"])
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "User isn't present in this group."}
+    return response
+
+
+def add_permission_to_user(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_permission_to_user, and returns status of applying.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains username, permission and entity id.
+
+    Returns:
+        HttpResponse: Status if permission for user was added successfully.
+
+    """
+    if response is None or not data or not ("id" in data and "permission_id" in data and "entity_id" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
+    try:
         u = try_get_user(response)
-        if not can(u, eid, 'can_write'):
-            raise Exception
-        user = Usr.objects.get(username=data["id"])
-
-        epu, created = EntityPermissionUser.objects.get_or_create(entity=eid, user=user)
-        response.content_type = "application/json"
-
-        if not created and not contains(epu.value, pid.value):
-            epu.value |= pid.value
-            epu.save()
+        if can(u, 'e0', 'edit_rights'):
+            repository.add_permission_to_user(data["id"], data["permission_id"], data["entity_id"])
             response.status_code = 201
-        elif created:
-            epu.value = pid.value
-            epu.save()
+            response.content = {"Info": "Successfully added permission."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Permission has not been added."}
+    return response
+
+
+def add_permission_to_group(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_permission_to_group, and returns status of applying.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains group id, permission and entity id.
+
+    Returns:
+        HttpResponse: Status if permission for group was added successfully.
+
+    """
+    if response is None or not data or not ("id" in data and "permission_id" in data and "entity_id" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
+    response.content_type = "application/json"
+    try:
+        u = try_get_user(response)
+        if can(u, 'e0', 'edit_rights'):
+            repository.add_permission_to_group(data["id"], data["permission_id"], data["entity_id"])
             response.status_code = 201
-    except Exception:
-        response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    return response
-
-
-def add_permission_to_group(response, data):
-    pid = PermissionType.objects.get(codename=data["permission_id"])
-    eid = Entities.objects.get(pk=data["entity_id"])
-    gid = Group.objects.get(pk=data["id"])
-
-    epg, created = EntityPermissionGroup.objects.get_or_create(entity=eid, group=gid)
-
-    if not created and not contains(epg.value, pid.value):
-        epg.value |= pid.value
-        epg.save()
-        response.status_code = 201
-    elif created:
-        epg.value = pid.value
-        epg.save()
-        response.status_code = 201
-    else:
-        response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    return response
-
-
-def update_user_permission(response, data):
-    uid = Usr.objects.get(uid=data["id"])
-    value = int(data["value"])
-    pid = PermissionType.objects.get(pk=data["permission_id"])
-    eid = Entities.objects.get(pk=data["entity_id"])
-    epu = EntityPermissionUser.objects.get(user=uid, entity=eid)
-
-    if pid.value == value:
-        epu.value &= ~value
-        epu.save()
-        response.status_code = 201
-    else:
-        response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    return response
-
-
-def update_group_permission(response, data):
-    gid = Group.objects.get(pk=data["id"])
-    value = int(data["value"])
-    pid = PermissionType.objects.get(pk=data["permission_id"])
-    eid = Entities.objects.get(pk=data["entity_id"])
-    epg = EntityPermissionGroup.objects.get(group=gid, entity=eid)
-
-    if pid.value == value:
-        epg.value &= ~value
-        epg.save()
-        response.status_code = 201
-    else:
-        response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    return response
-
-
-def get_entities(request, *args):
-    try:
-        user = Usr.objects.get(uid=try_get_user(request))
-        response = HttpResponse()
-        data = []
-        if user.uid == 'u0':
-            data = Entities.objects.all()
+            response.content = {"Info": "Successfully added permission."}
         else:
-            data.extend(Entities.objects.filter(owner=user))
-            for gu in Group_User.objects.filter(user=user):
-                for epg in EntityPermissionGroup.objects.filter(group=gu.group):
-                    if epg.entity not in data:
-                        data.append(epg.entity)
-
-            for epu in EntityPermissionUser.objects.filter(user=user):
-                if epu.entity not in data:
-                    data.append(epu.entity)
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    response.content = serializers.serialize("json", data, )
-    response.content_type = "application/json"
-    return response
-
-def get_users(response, *args):
-    users = serializers.serialize("json", Usr.objects.all(),
-                                  fields=["username", "email", "is_superuser"])
-    response.content = users
-    response.content_type = "application/json"
+        response.content = {"Error": "Permission has not been added."}
     return response
 
 
-def get_user(response, id):
-    user = serializers.serialize('json', [Usr.objects.get(pk=id), ],
-                                 fields=["username", "email", "is_superuser", "is_staff", "is_active"])
-    response.content = user
+def update_user_permission(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function update_user_permission, and returns status of applying.
+
+    Args:
+        response (HttpResponse):  Status to be applied to response of requested action.
+        data (dict): Contains uid, permission and entity id.
+
+    Returns:
+        HttpResponse: Status if permission for user was updated successfully.
+    """
     response.content_type = "application/json"
-    return response
 
+    if response is None or not data or not (
+            "id" in data and "permission_id" in data and "entity_id" in data and "value" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
 
-def get_groups_user(request, *args):
     try:
-        user = Usr.objects.get(uid=try_get_user(request))
-        response = HttpResponse()
-        g = []
-        if user.uid == 'u0':  # root
-            g = Group.objects.all()
+        u = try_get_user(response)
+        if can(u, 'e0', 'can_edit_users'):
+            repository.update_user_permission(data["id"], data["permission_id"], data["entity_id"], int(data["value"]))
+            response.status_code = 202
+            response.content = {"Info": "Successfully updated permission."}
         else:
-            g = [gu.group for gu in Group_User.objects.filter(user=user)]
-            g.extend(Group.objects.filter(owner=user))
-        groups = serializers.serialize("json", list(set(g)), )
-        response.status_code = 200
-        response.content = groups
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
-        response.content = {"Error": "User exists in this group."}
-    response.content_type = "application/json"
+        response.content = {"Error": "ERROR: Permission has not been updated."}
     return response
 
 
-def get_groups(response, data):
-    eid = Entities.objects.get(pk=data["eid"])
-    user = Usr.objects.get(uid=try_get_user(response))
-    pw = PermissionType.objects.get(codename='can_write').value
-    grp = []
+def update_group_permission(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function update_group_permission, and returns status of applying.
 
-    if user.uid == 'u0':
-        grp.extend(Group.objects.all())
-    else:
-        for gu in Group_User.objects.filter(user=user):
-            try:
-                epg = EntityPermissionGroup.objects.get(group=gu.group, entity=eid)
-                if contains(epg.value, pw):
-                    grp.append(gu.group)
-            except Exception:
-                continue
-        grp.extend(Group.objects.filter(owner=user))
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains gid, permission and entity id.
 
-    groups = serializers.serialize("json", list(set(grp)), )
-    response.content = groups
+    Returns:
+        HttpResponse: Status if permission for group was updated successfully.
+    """
+
+    if response is None or not data or not (
+            "id" in data and "permission_id" in data and "entity_id" in data and "value" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or no data is present."}, status=500)
     response.content_type = "application/json"
-    return response
-
-
-def get_all_user_permissions_by_eid(request, data):
-    response = HttpResponse()
-    et = Entities.objects.get(pk=data['eid']).entity_type
-    ep = Entity_permission.objects.filter(entity_type=et)
-    pt = [p.permission_type for p in ep]
-    permissions = serializers.serialize("json", pt, )
-    response.content = permissions
-    response.content_type = "application/json"
-    return response
-
-def entities_permissions(request, *args):
-    user = Usr.objects.get(uid=try_get_user(request))
-    response = HttpResponse()
-    # gids = ", ".join(f'"{g.group.pk}"' for g in Group_User.objects.filter(user=u))
-    data = []
-    if user.uid == 'u0':
-        data = json.dumps(run_query(PERMISSIONS_ENTTIES_USER_GROUP_ROOT, []))
-    else:
-        data = json.dumps(run_query(PERMISSIONS_ENTTIES_USER_GROUP, [user.uid, user.uid]))
-    response.content = data
-    response.content_type = "application/json"
-    return response
-
-def add_entity(response, data):
     try:
-        new_id = f"e{int(Entities.objects.latest('id').id[1:]) + 1}"
-        et = EntityType.objects.get(pk=data['et'])
-        user = Usr.objects.get(uid=data['uid'])
-        parent = Entities.objects.get(pk=data['parent'])
-        is_private = data['is_private'] == 'true' if 'is_private' in data else True
-        Entities.objects.create(id=new_id, name=data["name"], entity_type=et, owner=user, parent=parent, is_private=is_private)
-        response.status_code = 201
+        u = try_get_user(response)
+        if can(u, 'e0', 'can_edit_users'):
+            repository.update_group_permission(data["id"], data["permission_id"], data["entity_id"], int(data["value"]))
+            response.status_code = 202
+            response.content = {"Info": "Successfully updated permission."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
         response.status_code = 500
+        response.content = {"Error": "ERROR: Permission has not been updated."}
     return response
 
-def remove_entity(response, data):
+
+def get_entities(request: HttpResponse, *args) -> HttpResponse:
+    """This function passes data to repository function get_entities, and returns entties.
+
+    Args:
+        request (HttpResponse): Data to be applied on response object.
+        *args ():
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if request is None:
+        return HttpResponse({"Error": "ERROR: Request is None."}, status=500)
+    response = HttpResponse()
+    response.content_type = "application/json"
     try:
-        Entities.objects.get(pk=data['eid']).delete()
-        response.status_code = 203
+        uid = try_get_user(request)
+        if can(uid, 'e0', 'can_edit_users'):
+            data = repository.get_entities(uid)
+            response.content = serializers.serialize("json", data, )
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
     except Exception:
+        response.status_code = 500
+        response.content = {"Error": "ERROR: cannot get entties."}
+    return response
+
+
+def get_users(response: HttpResponse, *args) -> HttpResponse:
+    """This function returns users.
+
+    Args:
+        response (HttpResponse): Data to be applied on response object.
+        *args ():
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if response is None:
+        return HttpResponse({"Error": "ERROR: Request is None."}, status=500)
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            data = User.objects.all()
+            users = serializers.serialize("json", data, fields=["username", "email", "is_superuser"])
+            response.content = users
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.content = {"Error": "ERROR: cannot get users."}
         response.status_code = 500
     return response
 
-def can_request(request):
-    uid = ''
+
+def get_user(response: HttpResponse, id: int) -> HttpResponse:
+    """This function returns specific user.
+
+    Args:
+        response (HttpResponse): Data to be applied on response object.
+        id (int): id of user
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if response is None:
+        return HttpResponse({"Error": "ERROR: Request is None."}, status=500)
+
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            data = User.objects.get(pk=id)
+            response.status_code = 200
+            response.content = serializers.serialize('json', [data, ],
+                                                     fields=["username", "email", "is_superuser", "is_staff",
+                                                             "is_active"])
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.content = {"Error": "ERROR: cannot get user."}
+        response.status_code = 500
+    return response
+
+
+def get_groups_user(request: HttpResponse, *args) -> HttpResponse:
+    """This function passes data to repository function get_groups_user and returns all groups, where user belongs.
+
+    Args:
+        request (HttpResponse): Data to be applied on response object.
+        *args ():
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if request is None:
+        return HttpResponse({"Error": "ERROR: Request is None."}, status=500)
+
+    response = HttpResponse()
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(request)
+        if can(uid, 'e0', 'can_edit_users'):
+            data = repository.get_groups_user(uid)
+            response.content = serializers.serialize("json", list(set(data)), )
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot get groups."}
+    return response
+
+
+def get_groups(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function get_groups and returns all groups, where user belongs and has write permission on entity.
+
+    Args:
+        response (HttpResponse): Data to be applied on response object.
+        data (dict): Contains eid.
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if response is None or not data or "eid" not in data:
+        return HttpResponse({"Error": "ERROR: Request is None or data isn't present."}, status=500)
+
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_rights'):
+            groups = repository.get_groups(uid, data["eid"])
+            response.content = serializers.serialize("json", list(set(groups)), )
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot get groups."}
+    return response
+
+
+def get_all_user_permissions_by_eid(request: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository funciton get_all_user_permissions_by_eid, and returns all possible permission types for specific entity.
+
+    Args:
+        request (HttpResponse): Data to be applied on response object.
+        data (dict): Contains eid.
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if request is None or not data or "eid" not in data:
+        return HttpResponse({"Error": "ERROR: Request is None or data isn't present."}, status=500)
+
+    response = HttpResponse()
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(request)
+        if can(uid, 'e0', 'can_edit_rights'):
+            data = repository.get_all_user_permissions_by_eid(data['eid'])
+            response.content = serializers.serialize("json", data, )
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot get permissions."}
+    return response
+
+
+def entities_permissions(request: HttpResponse, *args) -> HttpResponse:
+    """This function passes data to repository function entities_permissions and returns rights has user and groups, where it belongs to.
+
+    Args:
+        request (HttpResponse):  Data to be applied on response object
+        *args ():
+
+    Returns:
+        HttpResponse: Serialized JSON response.
+    """
+    if request is None:
+        return HttpResponse({"Error": "ERROR: Request is None."}, status=500)
+    response = HttpResponse()
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(request)
+        if can(uid, 'e0', 'can_edit_rights'):
+            response.content = json.dumps(repository.entities_permissions(uid))
+            response.status_code = 200
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot get permissions."}
+    return response
+
+
+def add_entity(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function passes data to repository function add_entity and insert entity into a database.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains uid, name, et. Optionally parent and is_private.
+
+    Returns:
+        HttpResponse: Status of adding new entity to database.
+    """
+    if response is None or not data or not ("et" in data and "uid" in data and "name" in data):
+        return HttpResponse({"Error": "ERROR: Response is None or data isn't present."}, status=500)
+
+    response.content_type = "application/json"
+    try:
+        uid = data['uid']
+        name = data["name"]
+        et = data['et']
+        is_private = True
+        parent = None
+
+        if 'is_private' in data and data['is_private'] in ['true', 'false']:
+            is_private = data['is_private'] == 'true'
+
+        if 'parent' in data:
+            parent = data['parent']
+
+        if can(uid, 'e0', 'can_edit_rights'):
+            repository.add_entity(uid, name, et, parent, is_private)
+            response.status_code = 201
+            response.content = {"Info": "Successfully added entity."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot add entity."}
+    return response
+
+
+def remove_entity(response: HttpResponse, data: dict) -> HttpResponse:
+    """This function pass data to repository function remove_entity, and it will permanently delete entity from database.
+
+    Args:
+        response (HttpResponse): Status to be applied to response of requested action.
+        data (dict): Contains entity id - eid.
+
+    Returns:
+        HttpResponse: Status of removing entity.
+    """
+    if response is None or not data or "eid" not in data:
+        return HttpResponse({"Error": "ERROR: Response is None or data isn't present."}, status=500)
+
+    response.content_type = "application/json"
+    try:
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_rights'):
+            repository.remove_entity(data['eid'])
+            response.status_code = 203
+            response.content = {"Info": "Successfully removed entity."}
+        else:
+            raise ValueError("User has no permission to modify other users.")
+    except Exception:
+        response.status_code = 500
+        response.content = {"Error": "Cannot remove entity."}
+    return response
+
+
+def can_request(request: HttpResponse) -> HttpResponse:
+    if request is None:
+        return HttpResponse({"Error": "ERROR: Response is None."}, status=500)
+
     data = QueryDict.dict(request.POST)
-    # response = jwt_precheck(request)
-    # if response.status_code in [401, 405]:
-    #     uid = 'u1'  # Anonymous
-    #     response.status_code = 200
-    # else:
-    uid = try_get_user(request)
+    if not data or not ("eid" in data and "codename" in data):
+        return HttpResponse({"Error": "ERROR: Data isn't present."}, status=500)
+
     response = HttpResponse()
-    response.content = can(data["uid"] if "uid" in data else uid, data["eid"], data["codename"])
+    try:
+        uid = 'u1'
+        eid = data["eid"]
+        codename = data["codename"]
+
+        if "uid" in data:
+            uid = data["uid"]
+        else:
+            uid = try_get_user(request)
+
+        response.content = can(uid, eid, codename)
+    except Exception:
+        response.content = False
     return response
 
 
-def can(uid, eid, codename):
-    try:
-        if uid == 'u0':  # Root
-            return True
-        e = Entities.objects.get(pk=eid)
-        if e.owner.uid == uid:  # Owner
-            return True
-        if e.is_private:  # Entity is private
-            return False
-        user = Usr.objects.get(uid=uid)
-        p = PermissionType.objects.get(codename=codename)
-        pfc = PermissionType.objects.get(codename='full_control')
-        try:
-            epu = EntityPermissionUser.objects.get(entity=e, user=user)
-            if contains(epu.value, p.value, pfc.value):
-                return True
-        except EntityPermissionUser.DoesNotExist:
-            pass
-        groups = [gu.group for gu in Group_User.objects.filter(user=user)]
-        groups.append(Group.objects.get(pk=('g1' if uid == 'u1' else 'g0')))
-        for g in groups:
-            try:
-                epg = EntityPermissionGroup.objects.get(entity=e, group=g)
-                if contains(epg.value, p.value, pfc.value):
-                    return True
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return False
+

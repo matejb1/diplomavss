@@ -18,7 +18,7 @@ class User(AbstractUser):
 class Group(models.Model):
     id = models.CharField(max_length=12, default='', primary_key=True)
     owner = models.ForeignKey(User, on_delete=models.DO_NOTHING, to_field='uid')
-    name = models.CharField(max_length=255, default='')
+    name = models.CharField(max_length=255, default='', unique=True)
 
 
 class Group_User(models.Model):
