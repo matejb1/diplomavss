@@ -10,6 +10,7 @@ from .models import Group, PermissionType, EntityPermissionUser, Entities, Entit
 import authuser.repository as repository
 from authuser.repository import can
 
+
 def add_group(response: HttpResponse, data: dict) -> HttpResponse:
     """This function passes data to repository function add_group, and it returns the status of adding.
 
@@ -25,9 +26,12 @@ def add_group(response: HttpResponse, data: dict) -> HttpResponse:
     response.content_type = "application/json"
     try:
         uid = try_get_user(response)
-        repository.add_group(uid, data['name'].strip())
-        response.status_code = 201
-        response.content = {"Success": "User exists in this group."}
+        if can(uid, 'e0', 'can_edit_rights'):
+            repository.add_group(uid, data['name'].strip())
+            response.status_code = 201
+            response.content = {"Success": "User exists in this group."}
+        else:
+            raise Exception()
     except Exception:
         response.status_code = 500
         response.content = {"Error": "ERROR: Exception occurred at adding new group."}
@@ -49,9 +53,13 @@ def add_user(response: HttpResponse, data: dict) -> HttpResponse:
 
     response.content_type = "application/json"
     try:
-        repository.add_user(data['username'].strip(), data['email'].strip(), data['password'].strip())
-        response.status_code = 201
-        response.content = {"Info": "Successfully added new user."}
+        uid = try_get_user(response)
+        if can(uid, 'e0', 'can_edit_users'):
+            repository.add_user(data['username'].strip(), data['email'].strip(), data['password'].strip())
+            response.status_code = 201
+            response.content = {"Info": "Successfully added new user."}
+        else:
+            raise Exception()
     except Exception:
         response.status_code = 500
         response.content = {"Error": "Cannot create user."}
@@ -246,7 +254,7 @@ def add_permission_to_user(response: HttpResponse, data: dict) -> HttpResponse:
     response.content_type = "application/json"
     try:
         u = try_get_user(response)
-        if can(u, 'e0', 'edit_rights'):
+        if can(u, data["entity_id"], data["permission_id"],):
             repository.add_permission_to_user(data["id"], data["permission_id"], data["entity_id"])
             response.status_code = 201
             response.content = {"Info": "Successfully added permission."}
@@ -274,7 +282,7 @@ def add_permission_to_group(response: HttpResponse, data: dict) -> HttpResponse:
     response.content_type = "application/json"
     try:
         u = try_get_user(response)
-        if can(u, 'e0', 'edit_rights'):
+        if can(u, data["entity_id"], data["permission_id"]):
             repository.add_permission_to_group(data["id"], data["permission_id"], data["entity_id"])
             response.status_code = 201
             response.content = {"Info": "Successfully added permission."}
@@ -361,7 +369,7 @@ def get_entities(request: HttpResponse, *args) -> HttpResponse:
     response.content_type = "application/json"
     try:
         uid = try_get_user(request)
-        if can(uid, 'e0', 'can_edit_users'):
+        if can(uid, 'e0', 'can_edit_rights'):
             data = repository.get_entities(uid)
             response.content = serializers.serialize("json", data, )
             response.status_code = 200
@@ -448,7 +456,7 @@ def get_groups_user(request: HttpResponse, *args) -> HttpResponse:
     response.content_type = "application/json"
     try:
         uid = try_get_user(request)
-        if can(uid, 'e0', 'can_edit_users'):
+        if can(uid, 'e0', 'can_edit_rights'):
             data = repository.get_groups_user(uid)
             response.content = serializers.serialize("json", list(set(data)), )
             response.status_code = 200
@@ -559,7 +567,8 @@ def add_entity(response: HttpResponse, data: dict) -> HttpResponse:
 
     response.content_type = "application/json"
     try:
-        uid = data['uid']
+        uid1 = try_get_user(response)  # User who send
+        uid = data['uid']  # For user, we're asking
         name = data["name"]
         et = data['et']
         is_private = True
@@ -571,7 +580,8 @@ def add_entity(response: HttpResponse, data: dict) -> HttpResponse:
         if 'parent' in data:
             parent = data['parent']
 
-        if can(uid, 'e0', 'can_edit_rights'):
+        can1 = can(uid, 'e0', 'can_edit_rights')
+        if (uid == uid1 and can1) or (uid != uid1 and can1 and can(uid1, 'e0', 'can_edit_rights')):
             repository.add_entity(uid, name, et, parent, is_private)
             response.status_code = 201
             response.content = {"Info": "Successfully added entity."}
@@ -599,8 +609,9 @@ def remove_entity(response: HttpResponse, data: dict) -> HttpResponse:
     response.content_type = "application/json"
     try:
         uid = try_get_user(response)
-        if can(uid, 'e0', 'can_edit_rights'):
-            repository.remove_entity(data['eid'])
+        eid = data['eid']
+        if can(uid, eid, 'can_edit_rights'):
+            repository.remove_entity(eid)
             response.status_code = 203
             response.content = {"Info": "Successfully removed entity."}
         else:

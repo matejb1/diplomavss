@@ -58,7 +58,6 @@ public class ASGlobal {
   
   // dodana funkcionalnost za poganjanje ALGator ukazov (execute, analyse, ...) v svojem procesu. Za podrobnosti glej komentar v ADECommand
   public static final String COMMAND              = "COMMAND";        // parameters: run / status / output / stop + params
-  
   // a set of requests that do not log into log file
   public static final TreeSet<String> nonlogableRequests;
   static {

@@ -2,6 +2,7 @@ package si.fri.algator.server;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import si.fri.algator.authuser.AuthuserController;
 import si.fri.algator.entities.EAlgatorConfig;
 import static spark.Spark.*;
 
@@ -54,9 +55,12 @@ public class Server {
     ASLog.log(String.format("ALGatorServer Initialized on %s:%s ", host, port));    
     
     threadPool(16);
-    
-    
-    post("/*", (req, res) -> {
+
+    AuthuserController ac = new AuthuserController();
+
+      post("/PERMISSIONS/*", ac::post);
+
+      post("/*", (req, res) -> {
       String pParams = req.body();
 
       String path = req.pathInfo().toUpperCase();
@@ -84,7 +88,7 @@ public class Server {
     after((request, response) -> {      
       response.header("Access-Control-Allow-Origin", "*");
       response.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-      response.header("Access-Control-Allow-Headers", "Content-Type, Content-Encoding, SessionID");
+      response.header("Access-Control-Allow-Headers", "Content-Type, Content-Encoding, SessionID, Authorization");
       response.header("Access-Control-Max-Age", "5");
 
       response.header("Content-Encoding", "gzip");            

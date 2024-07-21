@@ -168,13 +168,10 @@ public class RequestProcessor {
         
       case ASGlobal.REQ_GETRESULTUPDATE:
         return getResultUpdate(jObj);
-        
       default:
         return ASGlobal.getErrorString("Unknown request");
     }
   }
-  
-    
   public String serverStatus() {
     int p = 0, r = 0, pa = 0, q = 0;
     for (ASTask aDETask : activeTasks) {

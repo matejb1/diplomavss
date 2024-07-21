@@ -148,8 +148,8 @@ def validate_request_and_execute(method: str, request: HttpResponse, function_se
     return response
 
 
-def contains(id, p, pfc=0xFFFF):  # u/g, p, p-full control
-    return (id & p) == p or (id & pfc) == pfc
+def contains(id, p):
+    return (id & p) == p
 
 
 def is_null_or_empty(item: str) -> bool:

@@ -2,10 +2,13 @@
 
 <script type="text/javascript" src="{% static 'js/UserGroupsHelper.js' %}"></script>
 <script type="text/javascript" src="{% static 'js/ManageSingleUser.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/EntityHelper.js' %}"></script>
 <script>
   var allGroups = null, userGroups = null, permissions = null, allPermissions = null, allEntties = null, currentUser = null;
   var data = {};
   loadSingleUserPage({{user_id|safe}});
+  // const jwtToken = "{{ access_token }}";
+  // add_project({'name': 'Project 1', 'is_private': false, 'owner': 'u2', 'parent': 'e0'});
 </script>
 <form>
   <div class="form-group">

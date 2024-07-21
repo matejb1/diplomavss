@@ -126,7 +126,7 @@ def manage_users_view(request):
     if repository.can(uid, 'e0', 'can_edit_users'):
         return render(request,
                   'cpindex.html',
-                       {'contentpage': 'manage_users.html'}
+                       {'contentpage': 'manage_users.html'},
                     )
     else:
         return render(request, 'cpindex.html',
@@ -141,7 +141,9 @@ def manage_single_user_view(request, id):
         return render(request,
                   'cpindex.html',
                        {'contentpage': 'manage_single_user.html',
-                               'user_id': id}
+                               'user_id': id,
+                               # 'access_token': MyTokenObtainPairSerializer.get_token(request.user).access_token
+                               }
                     )
     else:
         return render(request, 'cpindex.html',

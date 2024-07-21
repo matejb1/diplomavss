@@ -64,7 +64,7 @@ def dologin(request):
         nextpage = request.POST.get('next') or "/"
         response = redirect(nextpage)
         token = MyTokenObtainPairSerializer.get_token(user)
-        response.set_cookie("access", str(token.access_token), httponly=True)
+        response.set_cookie("access", str(token.access_token), httponly=True, )
         response.set_cookie("refresh", str(token), httponly=True)
         return response
     else:    

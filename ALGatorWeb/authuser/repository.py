@@ -469,7 +469,7 @@ def entities_permissions(uid: str) -> list:
         if uid == 'u0':
             data = run_query(PERMISSIONS_ENTTIES_USER_GROUP_ROOT, [])
         else:
-            data = run_query(PERMISSIONS_ENTTIES_USER_GROUP, [uid, uid])
+            data = run_query(PERMISSIONS_ENTTIES_USER_GROUP, [uid, uid, uid])
     except Exception:
         globalConfig.logger.error("ERROR: authuser.repository#entities_permissions: Exception occurred")
     return data
@@ -554,7 +554,7 @@ def can(uid: str, eid: str, codename: str) -> bool:
         pfc = PermissionType.objects.get(codename='full_control')
         try:
             epu = EntityPermissionUser.objects.get(entity=e, user=user)
-            if contains(epu.value, p.value, pfc.value):
+            if contains(epu.value, p.value):
                 return True
         except EntityPermissionUser.DoesNotExist:
             pass
