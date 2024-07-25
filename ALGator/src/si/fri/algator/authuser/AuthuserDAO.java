@@ -285,7 +285,7 @@ class AuthuserDAO {
                 id = rs.getString("id");
             }
 
-            id = "u" + (Integer.parseInt(id.substring(1)) + 1);
+            id = "e" + (Integer.parseInt(id.substring(1)) + 1);
 
             return id;
         } catch (Exception e) {
@@ -293,8 +293,8 @@ class AuthuserDAO {
         }
     }
 
-    protected void addProject(final String owner, final String name, final boolean isPrivate, final String parent) {
-        if (isEmptyOrNull(owner) || isEmptyOrNull(name) || !isStringValid("u", owner)) {
+    protected void addProject(final EntitiesDTO project) {
+        if (isEmptyOrNull(project.getOwner()) || isEmptyOrNull(project.getName()) || !isStringValid("u", project.getOwner())) {
             throw new IllegalArgumentException("Owner or name is null, empty or isn't valid.");
         }
 
@@ -304,17 +304,17 @@ class AuthuserDAO {
         }
 
         String parentEid = null;
-        if (!isEmptyOrNull(parent) && isStringValid("e", parent)) {
-            parentEid = parent;
+        if (!isEmptyOrNull(project.getParent()) && isStringValid("e", project.getParent())) {
+            parentEid = project.getParent();
         }
 
         String eid = getNewLatestEid();
         try {
             PreparedStatement stmt = conn.prepareStatement(INSERT_PROJECT);
             stmt.setString(1, eid);
-            stmt.setString(2, name);
-            stmt.setBoolean(3, isPrivate);
-            stmt.setString(4, owner);
+            stmt.setString(2, project.getName());
+            stmt.setBoolean(3, project.isPrivate());
+            stmt.setString(4, project.getOwner());
             stmt.setString(5, parentEid);
             stmt.execute();
         } catch (Exception e) {

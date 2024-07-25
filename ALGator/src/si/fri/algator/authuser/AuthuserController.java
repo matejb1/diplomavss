@@ -59,22 +59,23 @@ public class AuthuserController {
                 ASLog.log("Error: Data doesn't contains name and owner");
                 throw new IllegalArgumentException("Error: Data doesn't contains name and owner");
             }
-            String name = data.getString("name");
-            String owner = data.getString("owner");
-            boolean isPrivate = true;
-            String parent = null;
+            EntitiesDTO project = new EntitiesDTO();
+            project.setName(data.getString("name"));
+            project.setOwner(data.getString("owner"));
+            project.setPrivate(true);
+            project.setParent(null);
 
             if(keys.contains("is_private")){
-                isPrivate = data.getBoolean("is_private");
+                project.setPrivate(data.getBoolean("is_private"));
             }
 
             if(keys.contains("parent")){
-                parent = data.getString("parent");
+                project.setParent(data.getString("parent"));
             }
 
-            boolean can1 = can(owner, "e0", "can_edit_rights");
-            if(! uid.equals(owner) && can1 && can(uid, "e0", "can_edit_rights") || uid.equals(owner) && can1) {
-                authuserDAO.addProject(owner, name, isPrivate, parent);
+            boolean can1 = can(project.getOwner(), "e0", "can_edit_rights");
+            if(! uid.equals(project.getOwner()) && can1 && can(uid, "e0", "can_edit_rights") || uid.equals(project.getOwner()) && can1) {
+                authuserDAO.addProject(project);
                 res.status(201);
                 ASLog.log("Added project successfully.");
             }

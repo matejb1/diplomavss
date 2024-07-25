@@ -115,3 +115,15 @@ BEGIN
     DELETE FROM authuser_entitypermissiongroup WHERE group_id = gid;
 END;//
 DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER REMOVE_ENTITY_TRIGGER
+BEFORE DELETE ON authuser_entities
+FOR EACH ROW
+BEGIN
+	DECLARE eid VARCHAR(12);
+    SET eid := OLD.id;
+    DELETE FROM authuser_entitypermissionuser WHERE entity_id = eid;
+    DELETE FROM authuser_entitypermissiongroup WHERE entity_id = eid;
+END;//
+DELIMITER ;
