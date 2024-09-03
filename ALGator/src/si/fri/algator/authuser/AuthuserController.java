@@ -14,8 +14,8 @@ import static si.fri.algator.authuser.AuthuserHelper.*;
 import static si.fri.algator.authuser.CanUtil.can;
 
 public class AuthuserController {
+    private static AuthuserService authuserService = new AuthuserService();
 
-    private static AuthuserDAO authuserDAO = new AuthuserDAO();
     private static final String SECRET_KEY = "django-insecure-5_0$q%!57#_5%vep30rg-_%!k5z7c*q*4=z3h%k(b&@2g6q((7";
     public String post(Request req, Response res){
         String fullPath = req.pathInfo().toUpperCase();
@@ -32,7 +32,7 @@ public class AuthuserController {
 
         switch (endpoint) {
             case "/ADDPROJECT":
-                return addProjectEndpointHandler(req, res, uid);
+                return authuserService.addProject(req, res, uid);
             default:
                 ASLog.log("This endpoint ('" + fullPath + "') doesn't exits.");
                 res.status(500);
@@ -40,53 +40,4 @@ public class AuthuserController {
         }
     }
 
-    private String addProjectEndpointHandler(Request req, Response res, String uid) {
-        try {
-            if(isEmptyOrNull(uid) || !isStringValid("u", uid)) {
-                ASLog.log("User needs to be login, before continuing following action.");
-                throw new AuthenticationException("User needs to be login, before continuing following action.");
-            }
-
-            if(!req.body().startsWith("{")){
-                ASLog.log("Error: Data isn't in JSON format.");
-                throw new DataFormatException("Error: Data isn't in JSON format.");
-            }
-
-            JSONObject data = new JSONObject(req.body());
-            Set<String> keys = data.keySet();
-
-            if(!keys.contains("name") || !keys.contains("owner")) {
-                ASLog.log("Error: Data doesn't contains name and owner");
-                throw new IllegalArgumentException("Error: Data doesn't contains name and owner");
-            }
-            EntitiesDTO project = new EntitiesDTO();
-            project.setName(data.getString("name"));
-            project.setOwner(data.getString("owner"));
-            project.setPrivate(true);
-            project.setParent(null);
-
-            if(keys.contains("is_private")){
-                project.setPrivate(data.getBoolean("is_private"));
-            }
-
-            if(keys.contains("parent")){
-                project.setParent(data.getString("parent"));
-            }
-
-            boolean can1 = can(project.getOwner(), "e0", "can_edit_rights");
-            if(! uid.equals(project.getOwner()) && can1 && can(uid, "e0", "can_edit_rights") || uid.equals(project.getOwner()) && can1) {
-                authuserDAO.addProject(project);
-                res.status(201);
-                ASLog.log("Added project successfully.");
-            }
-            else {
-                ASLog.log("Permission denied.");
-                throw new NoPermissionException("Permission denied.");
-            }
-            return "{\"Info\": \"OK\"}";
-        }catch (Exception e) {
-            res.status(500);
-        }
-        return "{\"Error\": \"Error occurred.\"}";
-    }
 }
